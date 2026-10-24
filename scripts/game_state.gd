@@ -12,52 +12,52 @@ const SAVE_PATH := "user://mirror_save.cfg"
 
 const LEVELS := [
 	{
-		"title": "无色 · 在镜像中等一等",
+		"title": "无色 · 追随之桥",
 		"objective": "M 翻转到另一面，让影子踩住「影子踏板」，找到第一片红色。",
 		"story_before": "世界还只有黑白。她向前走，影子晚一步才跟上。",
 		"color_name": "红色",
-		"collect_color": Color("#ff637e"),
-		"bg_top": Color("#090909"),
-		"bg_bottom": Color("#1b1b1b"),
-		"accent": Color("#d5d5d5"),
-		"platform": Color("#232323"),
-		"edge": Color("#d5d5d5"),
+		"collect_color": Color("#FF637E"),
+		"bg_top": Color("#07080A"),
+		"bg_bottom": Color("#15171C"),
+		"accent": Color("#C8CDD6"),
+		"platform": Color("#2C2F36"),
+		"edge": Color("#9AA0AC"),
 	},
 	{
-		"title": "赤 · 与影子回头",
+		"title": "赤 · 天穹断路",
 		"objective": "先向右越过踏板，再回头；你踩「本体」，影子晚一步踩「影子」，找到蓝色。",
 		"story_before": "红色回到了房间的边缘。蓝色还藏在她们的回声里。",
 		"color_name": "蓝色",
-		"collect_color": Color("#59cfff"),
-		"bg_top": Color("#16090f"),
-		"bg_bottom": Color("#371722"),
-		"accent": Color("#f19aa8"),
-		"platform": Color("#20242b"),
-		"edge": Color("#f19aa8"),
+		"collect_color": Color("#59CFFF"),
+		"bg_top": Color("#100609"),
+		"bg_bottom": Color("#2A1018"),
+		"accent": Color("#D97C8C"),
+		"platform": Color("#3A1E26"),
+		"edge": Color("#C46A80"),
 	},
 	{
-		"title": "青 · 换一面同行",
+		"title": "青 · 等影子回来",
 		"objective": "影子先踩第一块踏板，再按 M 换面踩亮第二块，找到绿色。",
 		"story_before": "蓝色像夜雨一样漫进镜面。绿色在下一次翻转之后。",
 		"color_name": "绿色",
-		"collect_color": Color("#73e2a5"),
-		"bg_top": Color("#06111c"),
-		"bg_bottom": Color("#102e45"),
-		"accent": Color("#8cc6e0"),
-		"platform": Color("#20242b"),
-		"edge": Color("#8cc6e0"),
+		"collect_color": Color("#73E2A5"),
+		"bg_top": Color("#050B14"),
+		"bg_bottom": Color("#0F2A42"),
+		"accent": Color("#8CB8DA"),
+		"platform": Color("#1E3145"),
+		"edge": Color("#7BA8D0"),
 	},
 	{
-		"title": "翠 · 走出镜面",
+		"title": "翠 · 最后的同行",
 		"objective": "和影子完成上下两次配合，穿过绿色世界的出口。",
 		"story_before": "最后一种颜色已经回来。她和影子沿着绿色的光继续向前。",
 		"color_name": "",
-		"collect_color": Color("#a5dfb4"),
-		"bg_top": Color("#07140f"),
-		"bg_bottom": Color("#16382b"),
-		"accent": Color("#9ac4aa"),
-		"platform": Color("#20242b"),
-		"edge": Color("#9ac4aa"),
+		"collect_color": Color("#C9E8A0"),
+		"bg_top": Color("#060F0B"),
+		"bg_bottom": Color("#123024"),
+		"accent": Color("#A3C9B0"),
+		"platform": Color("#20402F"),
+		"edge": Color("#8FBBA1"),
 	},
 ]
 
@@ -66,6 +66,7 @@ var current_level := 0
 var completed_levels := 0
 var collected_mask := 0
 var checkpoint_level := -1
+var checkpoint_stage := 0
 var checkpoint_position := Vector2.ZERO
 var has_checkpoint := false
 
@@ -107,11 +108,13 @@ func advance_level(skipped: bool = false) -> void:
 	completed_levels = current_level
 	has_checkpoint = false
 	checkpoint_level = -1
+	checkpoint_stage = 0
 	checkpoint_position = Vector2.ZERO
 	_save_game()
 	changed.emit()
 
-func save_checkpoint(level_index: int, position: Vector2) -> void:
+func save_checkpoint(level_index: int, position: Vector2, stage: int = 0) -> void:
+	checkpoint_stage = stage
 	checkpoint_level = level_index
 	checkpoint_position = position
 	has_checkpoint = true
@@ -135,17 +138,18 @@ func load_from_disk() -> bool:
 	# place the player at the new room's entrance when migrating an old save.
 	var version := int(config.get_value("game", "version", 1))
 	collected_mask = int(config.get_value("game", "collected_mask", (1 << mini(current_level, COLOR_COUNT)) - 1)) & 7
-	checkpoint_level = int(config.get_value("game", "checkpoint_level", -1)) if version >= 2 else -1
-	checkpoint_position = config.get_value("game", "checkpoint_position", Vector2.ZERO) if version >= 2 else Vector2.ZERO
-	has_checkpoint = bool(config.get_value("game", "has_checkpoint", false)) if version >= 2 else false
+	checkpoint_level = int(config.get_value("game", "checkpoint_level", -1)) if version >= 3 else -1
+	checkpoint_position = config.get_value("game", "checkpoint_position", Vector2.ZERO) if version >= 3 else Vector2.ZERO
+	checkpoint_stage = int(config.get_value("game", "checkpoint_stage", 0)) if version >= 3 else 0
+	has_checkpoint = bool(config.get_value("game", "has_checkpoint", false)) if version >= 3 else false
 	changed.emit()
 	return true
 
 func _save_game() -> void:
 	var config := ConfigFile.new()
-	for key in ["player_name", "current_level", "completed_levels", "collected_mask", "checkpoint_level", "checkpoint_position", "has_checkpoint"]:
+	for key in ["player_name", "current_level", "completed_levels", "collected_mask", "checkpoint_stage", "checkpoint_level", "checkpoint_position", "has_checkpoint"]:
 		config.set_value("game", key, get(key))
-	config.set_value("game", "version", 2)
+	config.set_value("game", "version", 3)
 	var err := config.save(SAVE_PATH)
 	if err != OK:
 		push_warning("Could not write save file (error %d)" % err)
@@ -154,5 +158,6 @@ func clear_save() -> void:
 	if FileAccess.file_exists(SAVE_PATH):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
 	checkpoint_level = -1
+	checkpoint_stage = 0
 	checkpoint_position = Vector2.ZERO
 	has_checkpoint = false

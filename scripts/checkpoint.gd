@@ -22,12 +22,14 @@ func _ready() -> void:
 
 
 func _on_body_entered(body: Node2D) -> void:
-	if not body.is_in_group("player"):
+	if _active or not body.is_in_group("player"):
 		return
 	if body.has_method("set_respawn_position"):
 		body.call("set_respawn_position", respawn_position)
 	if _state != null:
-		_state.call("save_checkpoint", int(_state.get("current_level")), respawn_position)
+		var puzzle := get_parent().get_node_or_null("RoomPuzzle")
+		var stage: int = puzzle.solved_steps if puzzle != null else 0
+		_state.call("save_checkpoint", int(_state.get("current_level")), respawn_position, stage)
 	_set_active()
 	activated.emit()
 

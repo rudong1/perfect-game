@@ -32,6 +32,8 @@ func _physics_process(_delta: float) -> void:
 
 func _process(delta: float) -> void:
 	_age += delta
+	if is_exit and has_node("ExitVisual"):
+		$ExitVisual.modulate.a = 1.0 if enabled else 0.3
 	if hint != null:
 		hint.text = ("出口" if is_exit else color_name + "碎片") + ("" if enabled else " · 与影子一起开门")
 		hint.tint = color if enabled else Color("#9eaabc")
@@ -39,9 +41,6 @@ func _process(delta: float) -> void:
 
 func _draw() -> void:
 	if is_exit:
-		draw_rect(Rect2(-32, -68, 64, 136), Color("#101c19"))
-		draw_rect(Rect2(-32, -68, 64, 136), Color(color, 1.0 if enabled else 0.3), false, 5)
-		draw_line(Vector2(0, -58), Vector2(0, 58), Color(color, 0.3), 2)
 		return
 	var pulse := 1.0 + 0.06 * sin(_age * 3.0)
 	var points := PackedVector2Array([Vector2(0, -48), Vector2(28, 0), Vector2(0, 48), Vector2(-28, 0)])

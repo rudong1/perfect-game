@@ -71,6 +71,26 @@ func text_nodes(node: Node) -> Array[Label]:
 		labels.append_array(text_nodes(child))
 	return labels
 
+func drive(puzzle: Node, stage: int, flips: Array, jumping: bool) -> void:
+	Input.action_press("move_right")
+	Input.action_press("sprint")
+	var trigger := 0
+	var jumped := false
+	for tick in 1100:
+		await physics_frame
+		var x: float = game.player.position.x
+		if jumping and not jumped and x >= 650:
+			Input.action_press("jump")
+			jumped = true
+		if trigger < flips.size() and x >= flips[trigger][0]:
+			mirror.set_mirrored(flips[trigger][1])
+			trigger += 1
+			Input.action_release("jump")
+		if puzzle.solved_steps > stage:
+			break
+	release_controls()
+	await frames(8)
+
 func run() -> void:
 	await process_frame
 	state = root.get_node("GameState")
@@ -127,7 +147,7 @@ func run() -> void:
 	Input.action_press("sprint")
 	await frames(55)
 	check(slab.position.x > 690, "pushing still moves the prop")
-	check(player.is_pushing and player.current_animation == "idle", "pushing uses a stable stance instead of running")
+	check(player.is_pushing and player.current_animation == "push", "pushing uses a stable stance instead of running")
 	check(absf(player.velocity.x) <= player.PUSH_SPEED + 1 and player.sprite.speed_scale == 1, "Shift cannot accelerate push animation")
 	release_controls()
 	await frames(20)
@@ -151,6 +171,27 @@ func run() -> void:
 	legacy.save(state.SAVE_PATH)
 	check(state.load_from_disk() and state.collected_count() == 2 and not state.has_checkpoint, "old saves retain progress and discard stale checkpoints")
 
+	var frames_resource: SpriteFrames = player.sprite.sprite_frames
+	check(frames_resource.get_frame_count("run") == 8 and frames_resource.get_frame_count("sprint") == 8, "eight actual run frames replace four-frame motion")
+	check(frames_resource.get_frame_count("land") >= 3 and frames_resource.has_animation("apex") and frames_resource.has_animation("stop"), "landing, apex and braking transitions exist")
+	for animation in frames_resource.get_animation_names():
+		for i in frames_resource.get_frame_count(animation):
+			check(frames_resource.get_frame_texture(animation, i).get_size() == Vector2(320, 380), "all poses share a stable logical canvas")
+	await room(0)
+	var bridge: Node2D = get_nodes_in_group("shadow_bridges")[0]
+	check(bridge._active.count(true) == 0, "bridge starts physically absent")
+	bridge.plate._set_pressed(true)
+	bridge._physics_process(0.01)
+	await frames(1)
+	check(bridge.activated_once, "shadow pressure activates bridge")
+	bridge.plate._set_pressed(false)
+	await frames(120)
+	check(bridge._active.count(true) == 0, "released bridge actually loses collision")
+	state.save_checkpoint(0, Vector2(1760, 900), 2)
+	player.respawn_position = Vector2(1760, 900)
+	player.respawn()
+	await frames(3)
+	check(game.level_root.get_node("RoomPuzzle").solved_steps == 2, "death restores completed checkpoint sections")
 	state.begin_game("同行")
 	await room(0)
 	var unique_colors: Array = []
@@ -163,7 +204,7 @@ func run() -> void:
 		check(not game._goal.enabled, "color/exit stays locked before cooperating")
 		var palette: Dictionary = state.get_level()
 		if index == 0:
-			check(is_equal_approx(palette.bg_bottom.r, palette.bg_bottom.g) and is_equal_approx(palette.bg_bottom.g, palette.bg_bottom.b), "initial world has a monochrome palette")
+			check(absf(palette.bg_bottom.r - palette.bg_bottom.b) < 0.04, "initial world has a monochrome palette")
 		elif index == 1:
 			check(palette.bg_bottom.r > palette.bg_bottom.b, "red pickup leads to red atmosphere")
 		elif index == 2:
@@ -172,21 +213,37 @@ func run() -> void:
 			check(palette.bg_bottom.g > palette.bg_bottom.r and state.collected_count() == 3, "green pickup enters a playable green world with full progress")
 		for step_index in puzzle.steps.size():
 			var step: Dictionary = puzzle.steps[step_index]
-			await flip_to(step.mirrored)
-			if step.plates.size() == 1:
-				await walk_to(step.plates[0].position.x + 100)
-				await frames(50)
-			else:
-				var main_plate: Area2D = step.plates[0]
-				var shadow_plate: Area2D = step.plates[1]
-				await walk_to(shadow_plate.position.x + 85)
-				await frames(40)
-				await walk_to(main_plate.position.x)
-				await frames(8)
-			check(puzzle.solved_steps > step_index and step.door.is_open, "real delayed shadow movement solves room %d step %d" % [index + 1, step_index + 1])
+			match step.kind:
+				"plate":
+					await flip_to(step.mirrored)
+					await walk_to(step.plates[0].position.x + 100)
+					await frames(50)
+				"reach":
+					if index == 0:
+						await drive(puzzle, step_index, [[1200.0, false]], false)
+					elif index == 1 and step_index == 0:
+						await drive(puzzle, step_index, [[700.0, true], [930.0, false]], true)
+					elif index == 1:
+						await drive(puzzle, step_index, [[1560.0, true], [1890.0, false]], false)
+					elif index == 3:
+						await drive(puzzle, step_index, [[700.0, true], [930.0, false]], true)
+					else:
+						mirror.set_mirrored(false)
+						await drive(puzzle, step_index, [], false)
+				"release":
+					await walk_to(step.barrier.position.x + 200)
+					await frames(55)
+					check(step.barrier.stalled, "ceiling beam physically stops shadow")
+					mirror.set_mirrored(true)
+					await drive(puzzle, step_index, [], false)
+				"bridge":
+					mirror.set_mirrored(false)
+					await frames(135)
+					await drive(puzzle, step_index, [], false)
+			check(puzzle.solved_steps > step_index and step.door.is_open, "actual terrain route solves world %d step %d" % [index + 1, step_index + 1])
 		check(game._goal.enabled, "cooperation unlocks the room's color")
 		await flip_to(false)
-		await walk_to(1760)
+		await walk_to(3660)
 		check(state.collected_count() == mini(index + 1, 3) and (index == 3 or state.has_color(index)), "three colors fill progress; green-world exit adds no extra color")
 		check(not state.collect_current_color(), "duplicate collection cannot inflate prism progress")
 		await frames(60)

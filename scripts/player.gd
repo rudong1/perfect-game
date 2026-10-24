@@ -27,7 +27,7 @@ const JUMP_VELOCITY := -620.0
 const JUMP_CUT_VELOCITY := -220.0
 const COYOTE_TIME := 0.10
 const JUMP_BUFFER_TIME := 0.12
-const LAND_RECOVERY := 0.14
+const LAND_RECOVERY := 0.12
 const MIN_AIR_TIME := 0.08
 
 @onready var sprite: AnimatedSprite2D = $Sprite
@@ -43,6 +43,8 @@ var coyote_timer := 0.0
 var jump_buffer_timer := 0.0
 var air_time := 0.0
 var land_timer := 0.0
+var stop_timer := 0.0
+var _previous_speed := 0.0
 var current_animation := ""
 var is_crouching := false
 var is_pushing := false
@@ -140,6 +142,7 @@ func _physics_process(delta: float) -> void:
 		jump_buffer_timer = 0.0
 		coyote_timer = 0.0
 		land_timer = 0.0
+		stop_timer = 0.0
 		_play("jump")
 
 	if Input.is_action_just_released("jump") and velocity.y * gravity_sign < JUMP_CUT_VELOCITY:
@@ -196,32 +199,32 @@ func _set_crouching(value: bool) -> void:
 
 
 func _update_animation(delta: float, grounded: bool, sprinting: bool) -> void:
+	var speed := absf(velocity.x)
+	if grounded and _previous_speed > 45 and speed <= 12:
+		stop_timer = 0.15
+	_previous_speed = speed
+	stop_timer = maxf(0, stop_timer - delta)
 	if grounded:
 		if is_pushing:
-			_play("idle")
-			sprite.speed_scale = 1.0
+			_play("push")
 		elif is_crouching:
 			_play("crouch")
-			sprite.speed_scale = 1.0
-		elif land_timer > 0.0:
+		elif speed > 12:
+			# Running can flow straight out of a landing without a crouched slide.
+			land_timer = 0
+			_play("sprint" if sprinting else "run")
+		elif land_timer > 0:
 			land_timer -= delta
 			_play("land")
-			sprite.speed_scale = 1.0
-		elif absf(velocity.x) > 12.0:
-			var anim := "sprint" if sprinting else "run"
-			_play(anim)
-			var base_speed := SPRINT_SPEED if sprinting else RUN_SPEED
-			sprite.speed_scale = clampf(absf(velocity.x) / base_speed, 0.75, 1.3)
+		elif stop_timer > 0:
+			_play("stop")
 		else:
 			_play("idle")
-			sprite.speed_scale = 1.0
 	else:
-		_play("jump" if velocity.y * gravity_sign < 0.0 else "fall")
-		sprite.speed_scale = 1.0
-
+		var rise_speed := velocity.y * gravity_sign
+		_play("apex" if absf(rise_speed) < 85 else ("jump" if rise_speed < 0 else "fall"))
+	sprite.speed_scale = HeroAnimation.cadence(current_animation, speed)
 
 func _play(animation_name: String) -> void:
-	if current_animation == animation_name:
-		return
 	current_animation = animation_name
-	sprite.play(animation_name)
+	HeroAnimation.play(sprite, animation_name)

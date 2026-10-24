@@ -12,6 +12,7 @@ var _goal: Area2D
 var _busy := false
 var _toast_tween: Tween
 var _background: ShaderMaterial
+var _world_width := 3840.0
 
 func _ready() -> void:
 	_state = get_node("/root/GameState")
@@ -25,6 +26,7 @@ func _ready() -> void:
 	echo.set_script(MIRROR_SELF)
 	echo.source = player
 	add_child(echo)
+	player.respawned.connect(_restore_checkpoint)
 	load_level()
 
 func load_level() -> void:
@@ -44,6 +46,7 @@ func load_level() -> void:
 	$HUD/Objective.text = data.objective
 	$HUD/Story.text = data.story_before
 	var result: Dictionary = builder.build(_state.current_level, level_root)
+	_world_width = result.width
 	var spawn: Vector2 = result.spawn
 	if _state.has_checkpoint and _state.checkpoint_level == _state.current_level:
 		spawn = _state.checkpoint_position
@@ -104,3 +107,13 @@ func _on_checkpoint_saved(_position: Vector2) -> void:
 	_toast_tween = create_tween()
 	_toast_tween.tween_interval(0.8)
 	_toast_tween.tween_callback(func() -> void: toast.visible = false)
+
+func _restore_checkpoint() -> void:
+	if _state.has_checkpoint and _state.checkpoint_level == _state.current_level:
+		level_root.get_node("RoomPuzzle").restore_completed(_state.checkpoint_stage)
+
+func _process(_delta: float) -> void:
+	$Camera.position.x = clampf(player.position.x, 960, _world_width - 960)
+	var puzzle := level_root.get_node_or_null("RoomPuzzle")
+	if puzzle != null and not _busy:
+		$HUD/Objective.text = puzzle.current_hint()

@@ -94,8 +94,16 @@ func _physics_process(delta: float) -> void:
 	velocity.x = move_toward(velocity.x, _delayed_velocity, acceleration * delta)
 	velocity.y = clampf(velocity.y + 1600.0 * gravity_sign * delta, -950, 950)
 	move_and_slide()
-	sprite.flip_h = source.facing < 0
-	sprite.play("run" if absf(velocity.x) > 10 else "idle")
+	if absf(velocity.x) > 5:
+		sprite.flip_h = velocity.x < 0
+	var animation := "idle"
+	if is_on_floor():
+		if absf(velocity.x) > 12:
+			animation = "sprint" if absf(velocity.x) > 265 else "run"
+	else:
+		animation = "apex" if absf(velocity.y) < 85 else ("jump" if velocity.y * gravity_sign < 0 else "fall")
+	HeroAnimation.play(sprite, animation)
+	sprite.speed_scale = HeroAnimation.cadence(animation, absf(velocity.x))
 	hint.world_offset = Vector2(0, -232 * gravity_sign)
 	_trail_time += delta
 	if _trail_time >= 0.1:
@@ -114,7 +122,7 @@ func _physics_process(delta: float) -> void:
 	if global_position.y < -120 or global_position.y > 1200:
 		if not _reset_pending:
 			_reset_pending = true
-			reset_echo.call_deferred()
+			source.respawn.call_deferred()
 
 func resolve_overlap() -> bool:
 	return MirrorSafety.relocate(self, _mirror.axis_y)
