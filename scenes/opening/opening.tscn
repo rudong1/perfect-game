@@ -1,0 +1,62 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/opening.gd" id="1_opening"]
+[ext_resource type="Texture2D" path="res://assets/backgrounds/opening_gate.png" id="photo"]
+[ext_resource type="Shader" path="res://shaders/mirror_gate.gdshader" id="gate_shader"]
+
+[sub_resource type="ShaderMaterial" id="MirrorMat"]
+shader = ExtResource("gate_shader")
+shader_parameter/gate_center = Vector2(0.505, 0.387)
+shader_parameter/gate_size = Vector2(0.266, 0.874)
+shader_parameter/arch_frac = 0.53
+shader_parameter/ripple = 0.0
+shader_parameter/glass_tint = Color(0.72, 0.8, 0.95, 1)
+shader_parameter/glass_alpha = 0.95
+
+[node name="Opening" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("1_opening")
+
+[node name="Backdrop" type="ColorRect" parent="."]
+layout_mode = 1
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+color = Color(0.011764706, 0.015686275, 0.023529412, 1)
+
+[node name="Photo" type="Sprite2D" parent="."]
+position = Vector2(960, 540)
+scale = Vector2(1.189, 1.189)
+texture = ExtResource("photo")
+
+[node name="Gate" type="Sprite2D" parent="."]
+material = SubResource("MirrorMat")
+position = Vector2(960, 540)
+scale = Vector2(1.189, 1.189)
+texture = ExtResource("photo")
+
+[node name="Caption" type="Label" parent="."]
+modulate = Color(0.95, 0.96, 0.98, 1)
+theme_override_colors/font_color = Color(0.95, 0.96, 0.98, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 1)
+theme_override_constants/shadow_offset_x = 3
+theme_override_constants/shadow_offset_y = 3
+layout_mode = 0
+offset_left = 460.0
+offset_top = 500.0
+offset_right = 1460.0
+offset_bottom = 560.0
+theme_override_font_sizes/font_size = 34
+text = "按 Enter 进入"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Fade" type="ColorRect" parent="."]
+layout_mode = 1
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+color = Color(0, 0, 0, 0)
