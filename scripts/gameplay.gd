@@ -1,6 +1,8 @@
 extends Node2D
 ## Runs the five single-screen mirror rooms and the prism intermissions.
 
+const MIRROR_SELF = preload("res://scripts/mirror_self.gd")
+
 const BACKDROP_SHADER = preload("res://shaders/level_backdrop.gdshader")
 
 @onready var base: ColorRect = $Backdrop/Base
@@ -15,6 +17,7 @@ const BACKDROP_SHADER = preload("res://shaders/level_backdrop.gdshader")
 @onready var overlay: Control = $PrismLayer/PrismOverlay
 @onready var builder: Node = $LevelBuilder
 
+var echo: CharacterBody2D
 var _state: Node
 var _mirror: Node
 var _background: ShaderMaterial
@@ -37,6 +40,12 @@ func _ready() -> void:
 	overlay.continue_pressed.connect(_on_prism_continue)
 	_state.connect("checkpoint_saved", _on_checkpoint_saved)
 	toast.visible = false
+	echo = CharacterBody2D.new()
+	echo.name = "MirrorSelf"
+	echo.set_script(MIRROR_SELF)
+	echo.source = player
+	add_child(echo)
+	$HUD/Controls.text = "A/D 移动 · W 跳跃 · Shift 冲刺 · M 翻转/转动近处光镜 · E 穿立镜 · R 重置房间"
 	load_level()
 
 
@@ -55,12 +64,14 @@ func load_level() -> void:
 	_apply_palette(data)
 	_update_hud(data)
 
+	_state.end_light_puzzle()
 	var result: Dictionary = builder.call("build", level_index, level_root)
 	var spawn: Vector2 = result["spawn"]
 	if bool(_state.get("has_checkpoint")) and int(_state.get("checkpoint_level")) == level_index:
 		spawn = _state.get("checkpoint_position")
 	player.set_respawn_position(spawn)
 	player.call("respawn")
+	echo.reset_echo.call_deferred()
 	player.visible = true
 	player.set_physics_process(true)
 	_goal = result["goal"]
@@ -94,6 +105,7 @@ func _on_goal_reached() -> void:
 		_mirror.set("input_enabled", false)
 		_mirror.call("set_mirrored", false)
 	player.set_physics_process(false)
+	_state.end_light_puzzle()
 	_state.call("level_completed")
 	await get_tree().create_timer(0.2).timeout
 	overlay.show_result()
@@ -118,3 +130,19 @@ func _on_prism_continue() -> void:
 		return
 	overlay.hide_overlay()
 	load_level()
+
+
+func _process(_delta: float) -> void:
+	if _state == null:
+		return
+	if _state.light_puzzle_active:
+		var count: int = _state.restored_channel_count()
+		colors_label.text = "光路 RGB  %d / 3%s" % [count, " · 还差一色" if count == 2 else ""]
+	else:
+		colors_label.text = "沉星  %d / 5" % _state.completed_levels
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if not _busy and event.is_action_pressed("restart_room") and not event.is_echo():
+		load_level.call_deferred()
+		get_viewport().set_input_as_handled()

@@ -1,45 +1,47 @@
 extends Area2D
-## A reflection-only pressure plate. It is invisible and inert in normal view;
-## while mirrored, the player can stand on it to unlock the exit.
-
+## Momentary by default. Visibility and contact availability are independent:
+## a faint other-world plate still has honest collision/pressure semantics.
 signal activated
-
+signal pressure_changed(pressed: bool)
 @export var requires_mirror := true
-@export var player_group := "player"
-
+@export var phase_independent := false
+@export var latching := false
+@export var player_group := "mirror_actors"
 var is_activated := false
 var _mirror_state: Node
 
-
 func _ready() -> void:
-	_mirror_state = get_node_or_null("/root/MirrorState")
-	if _mirror_state == null:
-		push_error("MirrorState autoload not found")
-		return
-	_mirror_state.connect("mirror_changed", _on_mirror_changed)
-	_on_mirror_changed(bool(_mirror_state.get("mirrored")))
-
+	collision_layer = 0
+	collision_mask = 2 | 4
+	_mirror_state = get_node("/root/MirrorState")
+	_mirror_state.mirror_changed.connect(_on_mirror_changed)
+	_mirror_state.reset_requested.connect(reset)
+	_on_mirror_changed(_mirror_state.mirrored)
 
 func _is_available() -> bool:
-	var is_mirrored := bool(_mirror_state.get("mirrored"))
-	return is_mirrored if requires_mirror else not is_mirrored
+	return phase_independent or _mirror_state.mirrored == requires_mirror
 
-
-func _on_mirror_changed(_is_mirrored: bool) -> void:
-	visible = _is_available() or is_activated
-
+func _on_mirror_changed(_value: bool) -> void:
+	visible = true
+	modulate.a = 1.0 if _mirror_state.mirrored == requires_mirror else 0.18
 
 func _physics_process(_delta: float) -> void:
-	if is_activated or not _is_available():
+	var pressed := false
+	if _is_available():
+		for body in get_overlapping_bodies():
+			if body.is_in_group(player_group):
+				pressed = true
+	_set_pressed(pressed or (latching and is_activated))
+
+func _set_pressed(value: bool) -> void:
+	if value == is_activated:
 		return
-	for body in get_overlapping_bodies():
-		if body.is_in_group(player_group):
-			_activate()
-			return
+	is_activated = value
+	modulate = Color(0.7, 1.0, 1.0) if value else Color.WHITE
+	_on_mirror_changed(_mirror_state.mirrored)
+	pressure_changed.emit(value)
+	if value:
+		activated.emit()
 
-
-func _activate() -> void:
-	is_activated = true
-	visible = true
-	modulate = Color(0.7, 0.95, 1.0, 1.0)
-	activated.emit()
+func reset() -> void:
+	_set_pressed(false)

@@ -1,9 +1,9 @@
 extends CanvasLayer
 ## Full-screen vertical mirror renderer.
 ##
-## MirrorState owns the on/off state; this node only presents it. The world,
+## MirrorState owns the world axis and on/off state; this node only presents it. The world,
 ## sprites and lower CanvasLayers are copied by BackBufferCopy and re-drawn
-## upside down by a screen-texture shader. Physics and input stay untouched.
+## upside down by a screen-texture shader. The shared world axis is projected through the camera every frame.
 
 @onready var overlay: ColorRect = $Overlay
 @onready var back_buffer: BackBufferCopy = $BackBufferCopy
@@ -39,3 +39,11 @@ func _on_mirror_changed(is_mirrored: bool) -> void:
 func toggle() -> void:
 	if _mirror_state != null:
 		_mirror_state.call("toggle")
+
+
+func _process(_delta: float) -> void:
+	if _mirror_state == null:
+		return
+	# Convert the shared world axis through the camera and viewport stretch.
+	var screen_axis := get_viewport().get_canvas_transform() * Vector2(0, _mirror_state.axis_y)
+	_mirror_material.set_shader_parameter("axis_y", screen_axis.y / get_viewport().get_visible_rect().size.y)

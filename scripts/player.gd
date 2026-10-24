@@ -32,6 +32,11 @@ const MIN_AIR_TIME := 0.08
 @onready var sprite: AnimatedSprite2D = $Sprite
 @onready var collision: CollisionShape2D = $Collision
 
+signal respawned
+
+var gravity_sign := 1.0
+var _mirror_state: Node
+
 var facing := 1
 var coyote_timer := 0.0
 var jump_buffer_timer := 0.0
@@ -43,12 +48,18 @@ var respawn_position := Vector2.ZERO
 
 
 func _ready() -> void:
+	add_to_group("mirror_actors")
+	collision_layer = 2
+	collision_mask = 1
+	_mirror_state = get_node("/root/MirrorState")
+	_mirror_state.mirror_changed.connect(_on_mirror_changed)
 	floor_snap_length = 8.0
 	collision.shape = STAND_SHAPE
 	collision.position = STAND_CENTER
 	sprite.offset = STAND_SPRITE_OFFSET
 	respawn_position = global_position
 	_play("idle")
+	_on_mirror_changed(_mirror_state.mirrored)
 
 
 func set_respawn_position(point: Vector2) -> void:
@@ -56,13 +67,30 @@ func set_respawn_position(point: Vector2) -> void:
 
 
 func respawn() -> void:
+	# Reset mechanisms as well as actors; no stale latched plate or light state.
+	_mirror_state.restart_room()
 	global_position = respawn_position
 	velocity = Vector2.ZERO
+	coyote_timer = 0.0
+	jump_buffer_timer = 0.0
 	_set_crouching(false)
 	_play("idle")
-	var mirror_state := get_node_or_null("/root/MirrorState")
-	if mirror_state != null:
-		mirror_state.call("reset")
+	respawned.emit()
+	resolve_overlap.call_deferred()
+
+
+func _on_mirror_changed(value: bool) -> void:
+	gravity_sign = -1.0 if value else 1.0
+	up_direction = Vector2(0, -gravity_sign)
+	collision.position.y = (CROUCH_CENTER.y if is_crouching else STAND_CENTER.y) * gravity_sign
+	sprite.scale.y = absf(sprite.scale.y) * gravity_sign
+	coyote_timer = 0.0
+	jump_buffer_timer = 0.0
+	# Preserve momentum: the flip changes gravity, not the actor's velocity.
+
+
+func resolve_overlap() -> bool:
+	return MirrorSafety.relocate(self, _mirror_state.axis_y)
 
 
 func _physics_process(delta: float) -> void:
@@ -82,7 +110,7 @@ func _physics_process(delta: float) -> void:
 	if absf(input_axis) > 0.01:
 		facing = 1 if input_axis > 0.0 else -1
 
-	# Crouching is a grounded stance: it lowers the capsule and stops movement.
+	# Crouching lowers the capsule on either side of gravity.
 	_set_crouching(Input.is_action_pressed("crouch") and was_on_floor)
 
 	var sprinting := Input.is_action_pressed("sprint") and absf(input_axis) > 0.01 and not is_crouching
@@ -99,19 +127,23 @@ func _physics_process(delta: float) -> void:
 
 	if jump_buffer_timer > 0.0 and coyote_timer > 0.0:
 		_set_crouching(false)
-		velocity.y = JUMP_VELOCITY
+	if jump_buffer_timer > 0.0 and coyote_timer > 0.0 and not is_crouching:
+		velocity.y = JUMP_VELOCITY * gravity_sign
 		jump_buffer_timer = 0.0
 		coyote_timer = 0.0
 		land_timer = 0.0
 		_play("jump")
 
-	if Input.is_action_just_released("jump") and velocity.y < JUMP_CUT_VELOCITY:
-		velocity.y = JUMP_CUT_VELOCITY
+	if Input.is_action_just_released("jump") and velocity.y * gravity_sign < JUMP_CUT_VELOCITY:
+		velocity.y = JUMP_CUT_VELOCITY * gravity_sign
 
 	if not is_on_floor():
-		velocity.y = minf(velocity.y + GRAVITY * delta, MAX_FALL_SPEED)
+		velocity.y = clampf(velocity.y + GRAVITY * gravity_sign * delta, -MAX_FALL_SPEED, MAX_FALL_SPEED)
 
 	move_and_slide()
+	if global_position.y < -120.0 or global_position.y > 1200.0:
+		respawn()
+		return
 
 	var landed := is_on_floor()
 	if not landed and is_crouching:
@@ -140,9 +172,16 @@ func _physics_process(delta: float) -> void:
 func _set_crouching(value: bool) -> void:
 	if is_crouching == value:
 		return
+	if not value:
+		collision.shape = STAND_SHAPE
+		collision.position = STAND_CENTER * Vector2(1, gravity_sign)
+		if not MirrorSafety.is_clear(self, global_position):
+			collision.shape = CROUCH_SHAPE
+			collision.position = CROUCH_CENTER * Vector2(1, gravity_sign)
+			return
 	is_crouching = value
 	collision.shape = CROUCH_SHAPE if value else STAND_SHAPE
-	collision.position = CROUCH_CENTER if value else STAND_CENTER
+	collision.position = (CROUCH_CENTER if value else STAND_CENTER) * Vector2(1, gravity_sign)
 	sprite.offset = CROUCH_SPRITE_OFFSET if value else STAND_SPRITE_OFFSET
 	if value:
 		land_timer = 0.0
@@ -166,7 +205,7 @@ func _update_animation(delta: float, grounded: bool, sprinting: bool) -> void:
 			_play("idle")
 			sprite.speed_scale = 1.0
 	else:
-		_play("jump" if velocity.y < 0.0 else "fall")
+		_play("jump" if velocity.y * gravity_sign < 0.0 else "fall")
 		sprite.speed_scale = 1.0
 
 

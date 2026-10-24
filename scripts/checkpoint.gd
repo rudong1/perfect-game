@@ -11,6 +11,7 @@ var _state: Node
 
 
 func _ready() -> void:
+	collision_mask = 2
 	_state = get_node_or_null("/root/GameState")
 	body_entered.connect(_on_body_entered)
 	if _state != null and bool(_state.get("has_checkpoint")):

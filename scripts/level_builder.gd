@@ -14,6 +14,10 @@ const HAZARD_SCRIPT = preload("res://scripts/hazard.gd")
 const FALL_SCRIPT = preload("res://scripts/fall_reset.gd")
 const CHECKPOINT_SCRIPT = preload("res://scripts/checkpoint.gd")
 
+const MIRROR_SLAB = preload("res://scripts/mirror_slab.gd")
+const PRISM_CIRCUIT = preload("res://scripts/prism_circuit.gd")
+const ROOM_PUZZLE = preload("res://scripts/room_puzzle.gd")
+
 const FLOOR_Y := 900.0
 const SCREEN_W := 1920.0
 const SCREEN_H := 1080.0
@@ -26,6 +30,7 @@ func build(level_index: int, parent: Node2D) -> Dictionary:
 	_palette = state.get_level(level_index) if state != null else {}
 	_clear(parent)
 	_side_walls(parent)
+	_static_platform(parent, Vector2.ZERO, Vector2(SCREEN_W, 180), true)
 	_fall_reset(parent)
 
 	var spawn := Vector2(180, FLOOR_Y)
@@ -51,69 +56,120 @@ func build(level_index: int, parent: Node2D) -> Dictionary:
 # Rooms
 # ---------------------------------------------------------------------------
 
-func _level_0(parent: Node2D, spawn: Vector2) -> Area2D:
-	_ground(parent, 0, 900, 900)
-	_ground(parent, 1500, 900, 420)
-	_gate(parent, 760, false)
-	_bridge(parent, 900, 1500, 900)
-	_hazard(parent, 900, 1500, 1010)
-	_checkpoint(parent, 1540)
-	var plate := _plate(parent, 1640, true)
-	var door := _door(parent, 1780)
-	plate.connect("activated", Callable(door, "open"))
-	var goal := _goal(parent, 1860)
-	_inscription(parent, Vector2(250, 630), "桥在倒影里")
-	return goal
-
-
-func _level_1(parent: Node2D, spawn: Vector2) -> Area2D:
-	_ground(parent, 0, 900, 1920)
-	_gate(parent, 520, false)
-	_gate(parent, 1080, true)
-	_checkpoint(parent, 640)
-	var plate := _plate(parent, 1500, true)
-	var door := _door(parent, 1700)
-	plate.connect("activated", Callable(door, "open"))
-	var goal := _goal(parent, 1820)
-	return goal
-
-
-func _level_2(parent: Node2D, spawn: Vector2) -> Area2D:
-	_ground(parent, 0, 900, 700)
-	_ground(parent, 1500, 900, 420)
-	_bridge(parent, 700, 1500, 900)
-	_hazard(parent, 700, 1500, 1010)
-	_checkpoint(parent, 1540)
-	var plate := _plate(parent, 1640, true)
-	var door := _door(parent, 1780)
-	plate.connect("activated", Callable(door, "open"))
-	var goal := _goal(parent, 1860)
-	return goal
-
-
-func _level_3(parent: Node2D, spawn: Vector2) -> Area2D:
-	_ground(parent, 0, 900, 800)
-	_ground(parent, 1200, 900, 720)
-	_gate(parent, 650, false)
-	_bridge(parent, 800, 1200, 900)
-	_gate(parent, 1330, true)
-	_hazard(parent, 800, 1200, 1010)
-	_checkpoint(parent, 1240)
-	var plate := _plate(parent, 1560, false)
-	var door := _door(parent, 1740)
-	plate.connect("activated", Callable(door, "open"))
-	var goal := _goal(parent, 1840)
-	return goal
-
-
-func _level_4(parent: Node2D, spawn: Vector2) -> Area2D:
-	_ground(parent, 0, 900, 600)
-	_ground(parent, 1400, 900, 520)
-	_bridge(parent, 600, 1400, 900)
-	_checkpoint(parent, 1460)
+func _level_0(parent: Node2D, _spawn: Vector2) -> Area2D:
+	_ground(parent, 0, FLOOR_Y, SCREEN_W)
+	_checkpoint(parent, 260)
+	var lower := _pressure_plate(parent, Vector2(590, 888), false)
+	var upper := _pressure_plate(parent, Vector2(730, 192), true)
+	var door := _door(parent, 1100)
 	var goal := _goal(parent, 1780)
-	# A calm final room: no hazards, only a long reflection bridge.
+	_puzzle(parent, "twins", goal, door, [lower, upper])
+	_inscription(parent, Vector2(370, 470), "两颗星，一次回声。先越过，再回头。")
 	return goal
+
+
+func _level_1(parent: Node2D, _spawn: Vector2) -> Area2D:
+	_ground(parent, 0, FLOOR_Y, 1330)
+	_ground(parent, 1540, FLOOR_Y - 100, 380)
+	_static_platform(parent, Vector2(1260, 840), Vector2(70, 60), true)
+	_hazard(parent, 1330, 1540, 1000)
+	_checkpoint(parent, 260)
+	var slab := _slab(parent, 800, 660, 1200)
+	var door := _door(parent, 1650)
+	var goal := _goal(parent, 1800)
+	goal.position.y = 710
+	var puzzle := _puzzle(parent, "slab", goal, door)
+	puzzle.slab = slab
+	_target_zone(parent, 1040, 1120)
+	_inscription(parent, Vector2(440, 470), "移动镜轴，出口也随之移动。")
+	return goal
+
+
+func _level_2(parent: Node2D, _spawn: Vector2) -> Area2D:
+	return _light_room(parent, false, false)
+
+
+func _level_3(parent: Node2D, _spawn: Vector2) -> Area2D:
+	return _light_room(parent, true, false)
+
+
+func _level_4(parent: Node2D, _spawn: Vector2) -> Area2D:
+	return _light_room(parent, false, true)
+
+
+func _light_room(parent: Node2D, twins: bool, transit: bool) -> Area2D:
+	_ground(parent, 0, FLOOR_Y, SCREEN_W)
+	_checkpoint(parent, 260)
+	var slab := _slab(parent, 800, 740, 1180)
+	var circuit := Node2D.new()
+	circuit.name = "PrismCircuit"
+	circuit.set_script(PRISM_CIRCUIT)
+	parent.add_child(circuit)
+	var door := _door(parent, 1660)
+	var goal := _goal(parent, 1800)
+	var plates: Array[Area2D] = []
+	if twins:
+		plates.append(_pressure_plate(parent, Vector2(380, 888), false))
+		plates.append(_pressure_plate(parent, Vector2(520, 192), true))
+	var kind := "twins_prism" if twins else ("transit_prism" if transit else "prism")
+	var puzzle := _puzzle(parent, kind, goal, door, plates)
+	puzzle.slab = slab
+	puzzle.circuit = circuit
+	_target_zone(parent, 980, 1080)
+	_inscription(parent, Vector2(700, 370), "五颗沉星，借镜中的光回家。")
+	return goal
+
+
+func _pressure_plate(parent: Node2D, point: Vector2, mirrored: bool) -> Area2D:
+	var area := Area2D.new()
+	area.position = point
+	area.name = "UpperPlate" if mirrored else "LowerPlate"
+	var collision := CollisionShape2D.new()
+	var shape := RectangleShape2D.new()
+	shape.size = Vector2(64, 24)
+	collision.shape = shape
+	area.add_child(collision)
+	var graphic := Node2D.new()
+	graphic.position = Vector2(-32, -12)
+	_rect_visual(graphic, shape.size, _palette.accent, _palette.edge, 4)
+	area.add_child(graphic)
+	area.set_script(MIRROR_PLATE)
+	area.requires_mirror = mirrored
+	area.phase_independent = true
+	parent.add_child(area)
+	return area
+
+
+func _slab(parent: Node2D, x: float, minimum: float, maximum: float) -> StaticBody2D:
+	var slab := StaticBody2D.new()
+	slab.name = "MirrorSlab"
+	slab.position = Vector2(x, FLOOR_Y)
+	slab.set_script(MIRROR_SLAB)
+	slab.min_x = minimum
+	slab.max_x = maximum
+	slab.height = 640.0
+	parent.add_child(slab)
+	return slab
+
+
+func _puzzle(parent: Node2D, kind: String, goal: Area2D, door: StaticBody2D, plates: Array[Area2D] = []) -> Node:
+	var puzzle := Node.new()
+	puzzle.name = "RoomPuzzle"
+	puzzle.set_script(ROOM_PUZZLE)
+	puzzle.kind = kind
+	puzzle.goal = goal
+	puzzle.door = door
+	puzzle.plates = plates
+	parent.add_child(puzzle)
+	return puzzle
+
+
+func _target_zone(parent: Node2D, from_x: float, to_x: float) -> void:
+	var line := Line2D.new()
+	line.points = PackedVector2Array([Vector2(from_x, 890), Vector2(to_x, 890)])
+	line.width = 6
+	line.default_color = Color(0.45, 0.95, 0.75, 0.55)
+	parent.add_child(line)
 
 
 # ---------------------------------------------------------------------------
@@ -235,7 +291,7 @@ func _plate(parent: Node2D, x: float, requires_mirror: bool) -> Area2D:
 
 
 func _door(parent: Node2D, x: float) -> StaticBody2D:
-	var height := 150.0
+	var height := 720.0
 	var width := 30.0
 	var body := StaticBody2D.new()
 	body.position = Vector2(x, FLOOR_Y - height)

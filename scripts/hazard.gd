@@ -2,6 +2,7 @@ extends Area2D
 ## Contact hazard. Sends the player back to the room spawn point.
 
 func _ready() -> void:
+	collision_mask = 2
 	body_entered.connect(_on_body_entered)
 
 

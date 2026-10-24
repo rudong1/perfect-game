@@ -26,3 +26,15 @@ func open() -> void:
 	_tween.tween_property(self, "modulate:a", 0.0, 0.3)
 	_tween.tween_callback(func() -> void: visible = false)
 	opened.emit()
+
+
+func close() -> void:
+	if not is_open:
+		return
+	is_open = false
+	if _tween != null:
+		_tween.kill()
+	visible = true
+	modulate.a = 1.0
+	if _collision != null:
+		_collision.set_deferred("disabled", false)

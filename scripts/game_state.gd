@@ -12,10 +12,10 @@ const SAVE_PATH := "user://mirror_save.cfg"
 
 const LEVELS := [
 	{
-		"title": "第一镜 · 无色",
-		"objective": "在倒影里找到桥，踩亮倒影踏板。",
-		"story_before": "{name}在无色的房间里醒来。镜面里没有她的影子，只有一束白光。",
-		"story_after": "她第一次看见：桥不在现实里，而在倒影里。",
+		"title": "第一星 · 双生门廊",
+		"objective": "M 翻转重力；先向右再回头，借分身惯性同时压住上下两板。",
+		"story_before": "五颗星沉进镜面。{name}的回声不再只是一道影子。",
+		"story_after": "第一颗星醒来。她学会等另一个自己慢半拍。",
 		"bg_top": Color("#05070c"),
 		"bg_bottom": Color("#1a1e25"),
 		"accent": Color("#e8eef8"),
@@ -25,10 +25,10 @@ const LEVELS := [
 		"ray": Color("#ffffff"),
 	},
 	{
-		"title": "第二镜 · 赤",
-		"objective": "两扇门在两种倒影里换边，找到通过的时机。",
-		"story_before": "赤色的房间像一颗缓慢跳动的心。门在现实与倒影之间换边。",
-		"story_after": "她拾起第一片暖色：赤。",
+		"title": "第二星 · 推镜廊",
+		"objective": "A/D 推立镜到绿色刻度（1040–1120），E 穿镜；跨过缺口到高台。",
+		"story_before": "镜面在哪里，出口就在哪里；光也会被镜面挡住。",
+		"story_after": "第二颗星醒来，赤色沿着镜面的边缘流动。",
 		"bg_top": Color("#130406"),
 		"bg_bottom": Color("#3a0d16"),
 		"accent": Color("#ff5c71"),
@@ -38,10 +38,10 @@ const LEVELS := [
 		"ray": Color("#ff5c71"),
 	},
 	{
-		"title": "第三镜 · 青",
-		"objective": "倒影桥只在镜中实体；穿过镜雨，踩亮对岸的倒影踏板。",
-		"story_before": "倒悬的雨从天花板落下。她学会了在倒影里前行。",
-		"story_after": "青色的雨停在她掌心。",
+		"title": "第三星 · 三色回响",
+		"objective": "靠近红镜按 M → 推立镜越过绿镜 → M → E 穿镜、走到蓝镜 → M。",
+		"story_before": "一次翻转只转动近处的一面光镜。三束光必须同时抵达接收器。",
+		"story_after": "第三颗星醒来。两色曾经接近答案，三色终于共鸣。",
 		"bg_top": Color("#030b16"),
 		"bg_bottom": Color("#0a2438"),
 		"accent": Color("#51c8ff"),
@@ -51,10 +51,10 @@ const LEVELS := [
 		"ray": Color("#51c8ff"),
 	},
 	{
-		"title": "第四镜 · 翠",
-		"objective": "现实与倒影各有一块踏板；让两片颜色同时亮起。",
-		"story_before": "镜中的森林开始生长。两扇门都记得她来过的方向。",
-		"story_after": "翠色从裂缝里发芽。",
+		"title": "第四星 · 双生回响",
+		"objective": "先借分身同时压双板，再将红绿蓝三束光全部送达。",
+		"story_before": "回声留住门的记忆，光却必须此刻仍然亮着。",
+		"story_after": "第四颗星醒来，翠色从她和回声之间生长。",
 		"bg_top": Color("#04120a"),
 		"bg_bottom": Color("#0d2d18"),
 		"accent": Color("#69e39d"),
@@ -64,10 +64,10 @@ const LEVELS := [
 		"ray": Color("#69e39d"),
 	},
 	{
-		"title": "终镜 · 虹",
-		"objective": "穿过最后一重镜面，走向棱镜。",
-		"story_before": "所有颜色都在这里等她。三棱镜的白光第一次有了方向。",
-		"story_after": "她伸手，把光抱进怀里。",
+		"title": "第五星 · 沉星归途",
+		"objective": "完成一次 E 镜像传送，并保持三色光路畅通，走向最后的星。",
+		"story_before": "五颗沉星的名字，只在镜中读得清。",
+		"story_after": "最后一颗星浮出镜面。她和另一个自己，把光带回家。",
 		"bg_top": Color("#07141b"),
 		"bg_bottom": Color("#123746"),
 		"accent": Color("#f4fbff"),
@@ -77,6 +77,9 @@ const LEVELS := [
 		"ray": Color("#ffffff"),
 	},
 ]
+
+var light_puzzle_active := false
+var light_channels := 0
 
 var player_name := "无名"
 var current_level := 0
@@ -90,6 +93,7 @@ func begin_game(name: String) -> void:
 	player_name = name.strip_edges()
 	if player_name.is_empty():
 		player_name = "无名"
+	end_light_puzzle()
 	current_level = 0
 	completed_levels = 0
 	checkpoint_level = -1
@@ -129,7 +133,28 @@ func is_game_complete() -> bool:
 	return current_level >= MAX_LEVELS
 
 
+func begin_light_puzzle() -> void:
+	light_puzzle_active = true
+	light_channels = 0
+
+
+func set_light_channels(mask: int) -> void:
+	light_channels = mask & 7
+
+
+func end_light_puzzle() -> void:
+	light_puzzle_active = false
+	light_channels = 0
+
+
 func colored_rays() -> Array[Color]:
+	if light_puzzle_active:
+		var active: Array[Color] = []
+		var rgb := [Color("#ff5c71"), Color("#69e39d"), Color("#51c8ff")]
+		for i in 3:
+			if light_channels & (1 << i):
+				active.append(rgb[i])
+		return active
 	# Level 0 is the white beam. Red/blue/green are added by levels 1-3.
 	var rays: Array[Color] = []
 	for level_index in range(1, mini(completed_levels, 4)):
@@ -138,10 +163,12 @@ func colored_rays() -> Array[Color]:
 
 
 func has_rainbow() -> bool:
-	return completed_levels >= MAX_LEVELS
+	return light_channels == 7 if light_puzzle_active else completed_levels >= MAX_LEVELS
 
 
 func restored_channel_count() -> int:
+	if light_puzzle_active:
+		return int(bool(light_channels & 1)) + int(bool(light_channels & 2)) + int(bool(light_channels & 4))
 	return clampi(completed_levels - 1, 0, 3)
 
 

@@ -32,10 +32,11 @@ func _ready() -> void:
 func _process(_delta: float) -> void:
 	if _player == null or tag == null:
 		return
-	var screen := _player.get_global_transform_with_canvas().origin
-	var viewport_height := get_viewport().get_visible_rect().size.y
-	if _mirror != null and bool(_mirror.get("mirrored")):
-		screen.y = viewport_height - screen.y + 236.0
-	else:
-		screen.y -= 226.0
+	var gravity_sign := -1.0 if _mirror.mirrored else 1.0
+	var world_head := _player.global_position + Vector2(0, -226.0 * gravity_sign)
+	var transform := get_viewport().get_canvas_transform()
+	var screen := transform * world_head
+	if _mirror.mirrored:
+		var axis_screen := transform * Vector2(0, _mirror.axis_y)
+		screen.y = 2.0 * axis_screen.y - screen.y
 	tag.position = screen - Vector2(tag.size.x * 0.5, tag.size.y * 0.5)
