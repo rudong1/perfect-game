@@ -1,5 +1,5 @@
 extends Node
-## Ordered physical challenges: contact, landing, blocked shadow and live bridge.
+## The original three mechanics: twin pressure, moving reflection, live RGB.
 var steps: Array = []
 var goal: Area2D
 var solved_steps := 0
@@ -20,17 +20,32 @@ func reset() -> void:
 
 func restore_completed(count: int) -> void:
 	solved_steps = clampi(count, 0, steps.size())
+	# A save never supplies missing live light channels.
+	if solved_steps == steps.size() and _is_optical(steps.back()):
+		solved_steps -= 1
 	for i in solved_steps:
 		steps[i].door.open()
 	goal.enabled = solved_steps == steps.size()
 
 func current_hint() -> String:
-	return "和影子一起走向颜色。" if solved_steps >= steps.size() else str(steps[solved_steps].hint)
+	if solved_steps >= steps.size():
+		return "机关已解开，和影子一起走向出口。"
+	var step: Dictionary = steps[solved_steps]
+	var hint := str(step.hint)
+	if _is_optical(step):
+		hint += "  已抵达 %d / 3" % step.circuit.channel_count()
+	return hint
+
+func _is_optical(step: Dictionary) -> bool:
+	return str(step.kind).contains("prism")
 
 func _physics_process(delta: float) -> void:
 	if solved_steps >= steps.size():
-		goal.enabled = true
-		return
+		if not _is_optical(steps.back()) or steps.back().circuit.channel_mask == 7:
+			goal.enabled = true
+			return
+		# Optical exits close again if a pushed mirror interrupts the beam.
+		solved_steps = steps.size() - 1
 	var step: Dictionary = steps[solved_steps]
 	var ready := false
 	match step.kind:
@@ -38,15 +53,18 @@ func _physics_process(delta: float) -> void:
 			ready = get_node("/root/MirrorState").mirrored == step.mirrored
 			for plate in step.plates:
 				ready = ready and plate.is_activated
-		"reach":
-			ready = _player.position.x >= step.target_x and _player.is_on_floor() and absf(_player.position.y - 900) < 12
-		"release":
-			ready = step.barrier.released
-		"bridge":
-			ready = step.bridge.activated_once and _player.position.x >= step.target_x and _player.is_on_floor() and absf(_player.position.y - 900) < 12
+		"slab":
+			ready = step.slab.used and step.slab.position.x >= 1040 and step.slab.position.x <= 1120
+		"prism":
+			ready = step.circuit.channel_mask == 7
+		"transit_prism":
+			ready = step.slab.used and step.circuit.channel_mask == 7
 	_hold = _hold + delta if ready else 0
 	if _hold >= 0.08:
 		step.door.open()
 		solved_steps += 1
 		_hold = 0
 		goal.enabled = solved_steps == steps.size()
+	elif _is_optical(step):
+		step.door.close()
+		goal.enabled = false

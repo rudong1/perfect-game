@@ -35,7 +35,7 @@ func _process(delta: float) -> void:
 	if is_exit and has_node("ExitVisual"):
 		$ExitVisual.modulate.a = 1.0 if enabled else 0.3
 	if hint != null:
-		hint.text = ("出口" if is_exit else color_name + "碎片") + ("" if enabled else " · 与影子一起开门")
+		hint.text = ("出口" if is_exit else color_name + "碎片") + ("" if enabled else " · 先解开教堂机关")
 		hint.tint = color if enabled else Color("#9eaabc")
 	queue_redraw()
 

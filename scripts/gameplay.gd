@@ -1,6 +1,12 @@
 extends Node2D
 const MIRROR_SELF = preload("res://scripts/mirror_self.gd")
 const BACKDROP_SHADER = preload("res://shaders/level_backdrop.gdshader")
+const CHURCH_BACKGROUNDS := [
+	preload("res://assets/backgrounds/church_grey.png"),
+	preload("res://assets/backgrounds/church_red.png"),
+	preload("res://assets/backgrounds/church_blue.png"),
+	preload("res://assets/backgrounds/church_green.png"),
+]
 @onready var level_root: Node2D = $LevelRoot
 @onready var player: CharacterBody2D = $Player
 @onready var builder: Node = $LevelBuilder
@@ -12,7 +18,7 @@ var _goal: Area2D
 var _busy := false
 var _toast_tween: Tween
 var _background: ShaderMaterial
-var _world_width := 3840.0
+var _world_width := 1920.0
 
 func _ready() -> void:
 	_state = get_node("/root/GameState")
@@ -41,6 +47,8 @@ func load_level() -> void:
 	_background.set_shader_parameter("top_color", data.bg_top)
 	_background.set_shader_parameter("bottom_color", data.bg_bottom)
 	_background.set_shader_parameter("accent_color", data.accent)
+	_background.set_shader_parameter("scene_texture", CHURCH_BACKGROUNDS[_state.current_level])
+	_background.set_shader_parameter("use_scene_texture", true)
 	$HUD/Chapter.text = data.title
 	$HUD/Chapter.modulate = data.accent
 	$HUD/Objective.text = data.objective

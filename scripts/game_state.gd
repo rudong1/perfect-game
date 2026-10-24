@@ -12,8 +12,8 @@ const SAVE_PATH := "user://mirror_save.cfg"
 
 const LEVELS := [
 	{
-		"title": "无色 · 追随之桥",
-		"objective": "M 翻转到另一面，让影子踩住「影子踏板」，找到第一片红色。",
+		"title": "无色 · 双生门廊",
+		"objective": "按 M 换面，与晚一步的分身同时压住上下踏板，找到红色。",
 		"story_before": "世界还只有黑白。她向前走，影子晚一步才跟上。",
 		"color_name": "红色",
 		"collect_color": Color("#FF637E"),
@@ -24,8 +24,8 @@ const LEVELS := [
 		"edge": Color("#9AA0AC"),
 	},
 	{
-		"title": "赤 · 天穹断路",
-		"objective": "先向右越过踏板，再回头；你踩「本体」，影子晚一步踩「影子」，找到蓝色。",
+		"title": "赤 · 推镜廊",
+		"objective": "推动立镜改变反射轴，按 E 穿过镜面，找到蓝色。",
 		"story_before": "红色回到了房间的边缘。蓝色还藏在她们的回声里。",
 		"color_name": "蓝色",
 		"collect_color": Color("#59CFFF"),
@@ -36,8 +36,8 @@ const LEVELS := [
 		"edge": Color("#C46A80"),
 	},
 	{
-		"title": "青 · 等影子回来",
-		"objective": "影子先踩第一块踏板，再按 M 换面踩亮第二块，找到绿色。",
+		"title": "青 · 三色回响",
+		"objective": "按 M 调整最近的反射镜，并移动立镜避开光路，让三色同时抵达。",
 		"story_before": "蓝色像夜雨一样漫进镜面。绿色在下一次翻转之后。",
 		"color_name": "绿色",
 		"collect_color": Color("#73E2A5"),
@@ -49,7 +49,7 @@ const LEVELS := [
 	},
 	{
 		"title": "翠 · 最后的同行",
-		"objective": "和影子完成上下两次配合，穿过绿色世界的出口。",
+		"objective": "完成分身配合、推镜传送与三色光路，走出绿色教堂。",
 		"story_before": "最后一种颜色已经回来。她和影子沿着绿色的光继续向前。",
 		"color_name": "",
 		"collect_color": Color("#C9E8A0"),
@@ -69,8 +69,11 @@ var checkpoint_level := -1
 var checkpoint_stage := 0
 var checkpoint_position := Vector2.ZERO
 var has_checkpoint := false
+var light_puzzle_active := false
+var light_channels := 0
 
 func begin_game(name: String) -> void:
+	end_light_puzzle()
 	player_name = name.strip_edges() if not name.strip_edges().is_empty() else "无名"
 	current_level = 0
 	completed_levels = 0
@@ -138,10 +141,11 @@ func load_from_disk() -> bool:
 	# place the player at the new room's entrance when migrating an old save.
 	var version := int(config.get_value("game", "version", 1))
 	collected_mask = int(config.get_value("game", "collected_mask", (1 << mini(current_level, COLOR_COUNT)) - 1)) & 7
-	checkpoint_level = int(config.get_value("game", "checkpoint_level", -1)) if version >= 3 else -1
-	checkpoint_position = config.get_value("game", "checkpoint_position", Vector2.ZERO) if version >= 3 else Vector2.ZERO
-	checkpoint_stage = int(config.get_value("game", "checkpoint_stage", 0)) if version >= 3 else 0
-	has_checkpoint = bool(config.get_value("game", "has_checkpoint", false)) if version >= 3 else false
+	checkpoint_level = int(config.get_value("game", "checkpoint_level", -1)) if version >= 4 else -1
+	checkpoint_position = config.get_value("game", "checkpoint_position", Vector2.ZERO) if version >= 4 else Vector2.ZERO
+	checkpoint_stage = int(config.get_value("game", "checkpoint_stage", 0)) if version >= 4 else 0
+	has_checkpoint = bool(config.get_value("game", "has_checkpoint", false)) if version >= 4 else false
+	end_light_puzzle()
 	changed.emit()
 	return true
 
@@ -149,7 +153,7 @@ func _save_game() -> void:
 	var config := ConfigFile.new()
 	for key in ["player_name", "current_level", "completed_levels", "collected_mask", "checkpoint_stage", "checkpoint_level", "checkpoint_position", "has_checkpoint"]:
 		config.set_value("game", key, get(key))
-	config.set_value("game", "version", 3)
+	config.set_value("game", "version", 4)
 	var err := config.save(SAVE_PATH)
 	if err != OK:
 		push_warning("Could not write save file (error %d)" % err)
@@ -161,3 +165,28 @@ func clear_save() -> void:
 	checkpoint_stage = 0
 	checkpoint_position = Vector2.ZERO
 	has_checkpoint = false
+
+func begin_light_puzzle() -> void:
+	light_puzzle_active = true
+	light_channels = 0
+
+func end_light_puzzle() -> void:
+	light_puzzle_active = false
+	light_channels = 0
+
+func set_light_channels(mask: int) -> void:
+	light_channels = mask & 7
+
+func has_rainbow() -> bool:
+	return light_puzzle_active and light_channels == 7
+
+func restored_channel_count() -> int:
+	return int(bool(light_channels & 1)) + int(bool(light_channels & 2)) + int(bool(light_channels & 4))
+
+func colored_rays() -> Array[Color]:
+	var rays: Array[Color] = []
+	var rgb := [Color("#FF637E"), Color("#73E2A5"), Color("#59CFFF")]
+	for i in 3:
+		if light_channels & (1 << i):
+			rays.append(rgb[i])
+	return rays

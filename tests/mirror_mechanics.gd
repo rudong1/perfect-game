@@ -71,25 +71,61 @@ func text_nodes(node: Node) -> Array[Label]:
 		labels.append_array(text_nodes(child))
 	return labels
 
-func drive(puzzle: Node, stage: int, flips: Array, jumping: bool) -> void:
+func key_e() -> void:
+	var event := InputEventKey.new()
+	event.physical_keycode = KEY_E
+	event.pressed = true
+	Input.parse_input_event(event)
+	await frames(2)
+	event = InputEventKey.new()
+	event.physical_keycode = KEY_E
+	event.pressed = false
+	Input.parse_input_event(event)
+	await frames(10)
+
+func push_to(slab: StaticBody2D, target_x: float) -> void:
+	await walk_to(slab.position.x - 55)
 	Input.action_press("move_right")
-	Input.action_press("sprint")
-	var trigger := 0
-	var jumped := false
-	for tick in 1100:
+	for tick in 420:
 		await physics_frame
-		var x: float = game.player.position.x
-		if jumping and not jumped and x >= 650:
-			Input.action_press("jump")
-			jumped = true
-		if trigger < flips.size() and x >= flips[trigger][0]:
-			mirror.set_mirrored(flips[trigger][1])
-			trigger += 1
-			Input.action_release("jump")
-		if puzzle.solved_steps > stage:
+		if slab.position.x >= target_x:
 			break
-	release_controls()
-	await frames(8)
+	Input.action_release("move_right")
+	await frames(15)
+
+func solve_twins(index: int) -> void:
+	await flip_to(true)
+	if index == 0:
+		await walk_to(730)
+	else:
+		await walk_to(605)
+		await frames(40)
+		await walk_to(380)
+	await frames(12)
+
+func solve_light() -> void:
+	var circuit: Node2D = game.level_root.get_node("PrismCircuit")
+	var slab: StaticBody2D = game.level_root.get_node("MirrorSlab")
+	await walk_to(520)
+	mirror.set_mirrored(not mirror.mirrored)
+	await frames(135)
+	check(circuit.upward == [true, false, false] and circuit.channel_mask == 1, "first flip rotates only the nearby red reflector")
+	await push_to(slab, 1040)
+	check(slab.position.x >= 1040 and slab.position.x < 1100, "real A/D movement pushes the optical blocker out of the green beam")
+	await walk_to(960)
+	mirror.set_mirrored(not mirror.mirrored)
+	await frames(135)
+	check(circuit.channel_mask == 3 and state.restored_channel_count() == 2, "two live colors give near-success feedback")
+	var entry: Vector2 = game.player.position
+	var expected: Vector2 = slab.exit_for(entry)
+	await key_e()
+	check(slab.used and absf(game.player.position.x - expected.x) < 2, "real E input transports across the moving X axis")
+	await walk_to(1400)
+	mirror.set_mirrored(not mirror.mirrored)
+	await frames(135)
+	check(circuit.channel_mask == 7 and state.has_rainbow() and state.colored_rays().size() == 3, "M push M transit M restores three actual geometric rays")
+	await walk_to(1605)
+	await flip_to(false)
 
 func run() -> void:
 	await process_frame
@@ -160,7 +196,7 @@ func run() -> void:
 	await key_p(true)
 	check(state.current_level == 1, "held P does not repeatedly skip")
 	for label in text_nodes(game):
-		check(not label.text.contains("P") and not label.text.contains("落点") and not label.text.contains("穿镜") and not label.text.contains("光路"), "player text has no hidden shortcut, coordinates or removed mechanics")
+		check(not label.text.contains("P") and not label.text.contains("落点 x"), "player text keeps the developer shortcut and debug coordinates hidden")
 
 	# Migrate an old save without reusing its incompatible checkpoint geometry.
 	var legacy := ConfigFile.new()
@@ -177,27 +213,71 @@ func run() -> void:
 	for animation in frames_resource.get_animation_names():
 		for i in frames_resource.get_frame_count(animation):
 			check(frames_resource.get_frame_texture(animation, i).get_size() == Vector2(320, 380), "all poses share a stable logical canvas")
-	await room(0)
-	var bridge: Node2D = get_nodes_in_group("shadow_bridges")[0]
-	check(bridge._active.count(true) == 0, "bridge starts physically absent")
-	bridge.plate._set_pressed(true)
-	bridge._physics_process(0.01)
-	await frames(1)
-	check(bridge.activated_once, "shadow pressure activates bridge")
-	bridge.plate._set_pressed(false)
-	await frames(120)
-	check(bridge._active.count(true) == 0, "released bridge actually loses collision")
-	state.save_checkpoint(0, Vector2(1760, 900), 2)
-	player.respawn_position = Vector2(1760, 900)
+	# A translated portal destination is checked against actual world collision.
+	await room(1)
+	var transport: StaticBody2D = game.level_root.get_node("MirrorSlab")
+	await push_to(transport, 1080)
+	check(transport.position.x >= 1040 and transport.position.x <= 1120, "pushing reaches the marked transport interval")
+	var before: Vector2 = player.position
+	var exit: Vector2 = transport.exit_for(before)
+	await key_e()
+	check(transport.used and absf(player.position.x - exit.x) < 2, "E uses the exact horizontal reflection formula")
+	check(game._goal.enabled, "a correctly positioned mirror plus actual transit opens the corridor")
+	check(absf(transport.push_velocity) < 0.1, "friction stops the mirror after input releases")
+	player.position = Vector2(transport.position.x + 100, 900)
+	exit = transport.exit_for(player.position)
+	var blocker := StaticBody2D.new()
+	blocker.position = exit - Vector2(0, 80)
+	var collision := CollisionShape2D.new()
+	var shape := RectangleShape2D.new()
+	shape.size = Vector2(70, 170)
+	collision.shape = shape
+	blocker.add_child(collision)
+	game.level_root.add_child(blocker)
+	await frames(3)
+	before = player.position
+	check(not transport.try_transport(player), "a real body at the exit blocks unsafe transport")
+	check(player.position.distance_to(before) < 0.1, "failed transit leaves the player in place")
+	blocker.queue_free()
+	await frames(2)
+
+	await room(2)
+	var circuit: Node2D = game.level_root.get_node("PrismCircuit")
+	transport = game.level_root.get_node("MirrorSlab")
+	check(not state.has_rainbow() and circuit.channel_mask == 0, "saved color progress cannot power a new optical puzzle")
+	await solve_light()
+	check(game._goal.enabled, "three live beams enable the color fragment")
+	transport.position.x = 1160
+	await frames(12)
+	check(circuit.channel_mask == 3 and not state.has_rainbow(), "moving the slab onto the blue path physically occludes it")
+	check(not game._goal.enabled and not game.level_root.get_node("RoomPuzzle").steps[0].door.is_open, "breaking a beam closes both door and fragment again")
+	transport.position.x = 1040
+	await frames(12)
+	check(game._goal.enabled, "restoring the clear beam path reopens the optical exit")
+	for hint in get_nodes_in_group("readable_hints"):
+		hint._process(0)
+		check(hint.layer > 100 and hint.label.scale == Vector2.ONE, "restored mirror and receiver labels stay upright")
+	player.respawn()
+	await frames(12)
+	check(circuit.upward == [false, false, false] and not transport.used and not game._goal.enabled, "death resets mirror transit and optical orientations")
+	check(not state.has_rainbow() and state.restored_channel_count() == 0, "reset clears transient light state")
+	await room(3)
+	var finale: Node = game.level_root.get_node("RoomPuzzle")
+	await solve_twins(3)
+	check(finale.solved_steps == 1 and not game._goal.enabled, "twin cooperation alone cannot bypass the combined optical finale")
+	state.save_checkpoint(3, Vector2(270, 900), 1)
+	player.respawn_position = Vector2(270, 900)
 	player.respawn()
 	await frames(3)
-	check(game.level_root.get_node("RoomPuzzle").solved_steps == 2, "death restores completed checkpoint sections")
+	check(finale.solved_steps == 1 and not game._goal.enabled, "checkpoints restore twin progress without supplying missing rays")
 	state.begin_game("同行")
 	await room(0)
 	var unique_colors: Array = []
 	for index in 4:
 		check(state.current_level == index, "room %d is reached in sequence" % (index + 1))
-		check(get_nodes_in_group("mirror_slabs").is_empty() and not game.level_root.has_node("PrismCircuit"), "campaign uses only flips and shadow")
+		check(get_nodes_in_group("shadow_bridges").is_empty() and not game.level_root.has_node("ShadowBarrier"), "campaign restores the original three mechanics")
+		check(bool(game._background.get_shader_parameter("use_scene_texture")) and game._background.get_shader_parameter("scene_texture") == game.CHURCH_BACKGROUNDS[index], "world uses its authored cathedral background")
+		check(game.CHURCH_BACKGROUNDS[index].get_width() >= 1600 and game._world_width == 1920, "background and room retain the single-screen composition")
 		if index < 3:
 			unique_colors.append(state.get_level().collect_color)
 		var puzzle: Node = game.level_root.get_node("RoomPuzzle")
@@ -211,39 +291,23 @@ func run() -> void:
 			check(palette.bg_bottom.b > palette.bg_bottom.r, "blue pickup leads to blue atmosphere")
 		else:
 			check(palette.bg_bottom.g > palette.bg_bottom.r and state.collected_count() == 3, "green pickup enters a playable green world with full progress")
-		for step_index in puzzle.steps.size():
-			var step: Dictionary = puzzle.steps[step_index]
-			match step.kind:
-				"plate":
-					await flip_to(step.mirrored)
-					await walk_to(step.plates[0].position.x + 100)
-					await frames(50)
-				"reach":
-					if index == 0:
-						await drive(puzzle, step_index, [[1200.0, false]], false)
-					elif index == 1 and step_index == 0:
-						await drive(puzzle, step_index, [[700.0, true], [930.0, false]], true)
-					elif index == 1:
-						await drive(puzzle, step_index, [[1560.0, true], [1890.0, false]], false)
-					elif index == 3:
-						await drive(puzzle, step_index, [[700.0, true], [930.0, false]], true)
-					else:
-						mirror.set_mirrored(false)
-						await drive(puzzle, step_index, [], false)
-				"release":
-					await walk_to(step.barrier.position.x + 200)
-					await frames(55)
-					check(step.barrier.stalled, "ceiling beam physically stops shadow")
-					mirror.set_mirrored(true)
-					await drive(puzzle, step_index, [], false)
-				"bridge":
-					mirror.set_mirrored(false)
-					await frames(135)
-					await drive(puzzle, step_index, [], false)
-			check(puzzle.solved_steps > step_index and step.door.is_open, "actual terrain route solves world %d step %d" % [index + 1, step_index + 1])
+		if index == 0:
+			await solve_twins(0)
+		elif index == 1:
+			var campaign_slab: StaticBody2D = game.level_root.get_node("MirrorSlab")
+			await push_to(campaign_slab, 1080)
+			await key_e()
+		elif index == 2:
+			await solve_light()
+		else:
+			await solve_twins(3)
+			check(puzzle.solved_steps == 1 and not game._goal.enabled, "final room first requires real twin contact")
+			await solve_light()
+		for step in puzzle.steps:
+			check(step.door.is_open, "actual inputs solve world %d %s challenge" % [index + 1, step.kind])
 		check(game._goal.enabled, "cooperation unlocks the room's color")
 		await flip_to(false)
-		await walk_to(3660)
+		await walk_to(1740)
 		check(state.collected_count() == mini(index + 1, 3) and (index == 3 or state.has_color(index)), "three colors fill progress; green-world exit adds no extra color")
 		check(not state.collect_current_color(), "duplicate collection cannot inflate prism progress")
 		await frames(60)

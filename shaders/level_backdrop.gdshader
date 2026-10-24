@@ -7,6 +7,8 @@ uniform vec4 accent_color : source_color = vec4(0.784, 0.804, 0.839, 1.0);
 uniform float glow_strength : hint_range(0.0, 2.0) = 1.0;
 uniform vec4 platform_color : source_color = vec4(0.173, 0.184, 0.212, 1.0);
 uniform bool moss_enabled = false;
+uniform sampler2D scene_texture : source_color, filter_linear;
+uniform bool use_scene_texture = false;
 
 float hash(vec2 p) {
 	return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
@@ -40,5 +42,15 @@ void fragment() {
 	}
 	vec2 centered = uv - 0.5;
 	col *= 1.0 - dot(centered, centered) * 0.75;
+	if (use_scene_texture) {
+		// Cover the viewport without stretching the authored architecture.
+		vec2 image_size = vec2(textureSize(scene_texture, 0));
+		float image_aspect = image_size.x / image_size.y;
+		float screen_aspect = SCREEN_PIXEL_SIZE.y / SCREEN_PIXEL_SIZE.x;
+		vec2 cover = vec2(min(1.0, screen_aspect / image_aspect), min(1.0, image_aspect / screen_aspect));
+		vec2 scene_uv = (uv - 0.5) * cover + 0.5;
+		col = texture(scene_texture, scene_uv).rgb * 0.88;
+		col *= 1.0 - dot(centered, centered) * 0.18;
+	}
 	COLOR = vec4(col, 1.0);
 }
