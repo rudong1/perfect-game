@@ -1,7 +1,8 @@
 [gd_scene format=3 uid="uid://x2vfuevfstu5"]
 
 [ext_resource type="Script" path="res://scripts/ending_screen.gd" id="1_pyjtg"]
-[ext_resource type="Script" uid="uid://breh7cxxcjmqw" path="res://scripts/prism_visual.gd" id="2_7f101"]
+
+[ext_resource type="Script" path="res://scripts/color_progress.gd" id="progress"]
 
 [node name="EndingScreen" type="Control" unique_id=1552134924]
 layout_mode = 3
@@ -16,12 +17,6 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 mouse_filter = 2
 
-[node name="PrismArt" type="Control" parent="." unique_id=1184265748]
-anchors_preset = 0
-anchor_right = 1.0
-anchor_bottom = 1.0
-mouse_filter = 2
-script = ExtResource("2_7f101")
 
 [node name="Title" type="Label" parent="." unique_id=289117379]
 modulate = Color(0.96862745, 0.9843137, 1, 1)
@@ -61,3 +56,11 @@ offset_right = 430.0
 offset_bottom = 708.0
 theme_override_font_sizes/font_size = 24
 text = "再走一次"
+
+[node name="ColorProgress" type="Control" parent="."]
+offset_left = 48.0
+offset_top = 26.0
+offset_right = 330.0
+offset_bottom = 86.0
+mouse_filter = 2
+script = ExtResource("progress")

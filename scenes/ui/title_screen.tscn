@@ -1,7 +1,8 @@
 [gd_scene format=3 uid="uid://btavnacadmb34"]
 
 [ext_resource type="Script" uid="uid://cpk3aetjjyr15" path="res://scripts/title_screen.gd" id="1_aqpy5"]
-[ext_resource type="Script" uid="uid://breh7cxxcjmqw" path="res://scripts/prism_visual.gd" id="2_w8uqo"]
+
+[ext_resource type="Script" path="res://scripts/color_progress.gd" id="progress"]
 
 [node name="TitleScreen" type="Control" unique_id=1651891657]
 layout_mode = 3
@@ -17,12 +18,6 @@ anchor_bottom = 1.0
 mouse_filter = 2
 color = Color(0.015686275, 0.023529412, 0.039215688, 1)
 
-[node name="PrismArt" type="Control" parent="." unique_id=1199033029]
-anchors_preset = 0
-anchor_right = 1.0
-anchor_bottom = 1.0
-mouse_filter = 2
-script = ExtResource("2_w8uqo")
 
 [node name="Title" type="Label" parent="." unique_id=201759118]
 modulate = Color(0.9490196, 0.96862745, 1, 1)
@@ -32,7 +27,7 @@ offset_top = 130.0
 offset_right = 1220.0
 offset_bottom = 260.0
 theme_override_font_sizes/font_size = 92
-text = "五色棱镜"
+text = "镜中同行"
 
 [node name="Subtitle" type="Label" parent="." unique_id=1132698168]
 modulate = Color(0.56078434, 0.6392157, 0.7490196, 1)
@@ -42,7 +37,7 @@ offset_top = 270.0
 offset_right = 1030.0
 offset_bottom = 310.0
 theme_override_font_sizes/font_size = 22
-text = "PRISM  /  A MIRROR JOURNEY"
+text = "A JOURNEY WITH YOUR SHADOW"
 
 [node name="Story" type="Label" parent="." unique_id=2122331027]
 modulate = Color(0.78039217, 0.83137256, 0.90588236, 1)
@@ -52,7 +47,7 @@ offset_top = 350.0
 offset_right = 978.0
 offset_bottom = 530.0
 theme_override_font_sizes/font_size = 24
-text = "镜之国的颜色被一场倒流的雨洗去。少女在无色的房间醒来，只有一束白光指向镜面。穿过五重镜域，把颜色带回世界。"
+text = "世界最初只有黑白。少女和晚一步跟随的影子一起翻越镜面，依次找回红、蓝、绿，让颜色慢慢回到房间。"
 autowrap_mode = 2
 
 [node name="NameLabel" type="Label" parent="." unique_id=747342136]
@@ -103,3 +98,11 @@ offset_right = 750.0
 offset_bottom = 768.0
 theme_override_font_sizes/font_size = 24
 text = "继续旅程"
+
+[node name="ColorProgress" type="Control" parent="."]
+offset_left = 48.0
+offset_top = 26.0
+offset_right = 330.0
+offset_bottom = 86.0
+mouse_filter = 2
+script = ExtResource("progress")

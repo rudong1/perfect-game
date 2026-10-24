@@ -4,14 +4,22 @@ extends CharacterBody2D
 
 const HERO_FRAMES = preload("res://assets/characters/hero/hero_frames.tres")
 const CAPSULE = preload("res://assets/characters/hero/hero_capsule.tres")
-const FOLLOW_ACCEL := 420.0
-const FOLLOW_DRAG := 240.0
+const FOLLOW_DELAY := 0.42
+const FOLLOW_ACCEL := 1000.0
+const FOLLOW_DRAG := 1100.0
 var source: CharacterBody2D
 var gravity_sign := -1.0
 var _mirror: Node
 var sprite: AnimatedSprite2D
 var _collision: CollisionShape2D
 var _reset_pending := false
+var _clock := 0.0
+var _delayed_velocity := 0.0
+var _history: Array = []
+var _trail: Array[Vector2] = []
+var _ghosts: Array[Sprite2D] = []
+var _trail_time := 0.0
+var hint: CanvasLayer
 
 func _ready() -> void:
 	add_to_group("mirror_actors")
@@ -28,16 +36,40 @@ func _ready() -> void:
 	sprite.centered = false
 	sprite.scale = Vector2(0.62, 0.62)
 	sprite.offset = Vector2(-160, -342)
-	sprite.modulate = Color(0.40, 0.82, 1.0, 0.72)
+	sprite.modulate = Color(1, 1, 1, 0.92)
+	var tint := ShaderMaterial.new()
+	tint.shader = preload("res://shaders/shadow_tint.gdshader")
+	sprite.material = tint
+	for i in 2:
+		var ghost := Sprite2D.new()
+		ghost.centered = false
+		ghost.scale = sprite.scale
+		ghost.offset = sprite.offset
+		ghost.modulate = Color(0.85, 0.85, 0.85, 0.14 - i * 0.05)
+		ghost.z_index = -1
+		add_child(ghost)
+		_ghosts.append(ghost)
 	add_child(sprite)
 	_mirror = get_node("/root/MirrorState")
 	_mirror.mirror_changed.connect(_on_mirror_changed)
 	_mirror.axis_changed.connect(func(_axis: float) -> void: reset_echo.call_deferred())
 	source.respawned.connect(func() -> void: reset_echo.call_deferred())
+	hint = CanvasLayer.new()
+	hint.set_script(preload("res://scripts/readable_hint.gd"))
+	hint.target = self
+	hint.text = "影子 · 晚一步跟随"
+	hint.tint = Color("#e4e4e4")
+	add_child(hint)
 	reset_echo()
 
 func reset_echo() -> void:
 	_reset_pending = false
+	_history.clear()
+	_trail.clear()
+	_delayed_velocity = 0.0
+	_clock = 0.0
+	for ghost in _ghosts:
+		ghost.visible = false
 	global_position = _mirror.reflect_point(source.global_position)
 	velocity = Vector2(source.velocity.x, -source.velocity.y)
 	_on_mirror_changed(_mirror.mirrored)
@@ -54,12 +86,31 @@ func _on_mirror_changed(value: bool) -> void:
 func _physics_process(delta: float) -> void:
 	if not is_instance_valid(source) or not source.is_physics_processing():
 		return
-	var acceleration := FOLLOW_ACCEL if absf(source.velocity.x) > 5 else FOLLOW_DRAG
-	velocity.x = move_toward(velocity.x, source.velocity.x, acceleration * delta)
+	_clock += delta
+	_history.append({"time": _clock, "velocity": source.velocity.x})
+	while not _history.is_empty() and _history[0].time <= _clock - FOLLOW_DELAY:
+		_delayed_velocity = _history.pop_front().velocity
+	var acceleration := FOLLOW_ACCEL if absf(_delayed_velocity) > 5 else FOLLOW_DRAG
+	velocity.x = move_toward(velocity.x, _delayed_velocity, acceleration * delta)
 	velocity.y = clampf(velocity.y + 1600.0 * gravity_sign * delta, -950, 950)
 	move_and_slide()
 	sprite.flip_h = source.facing < 0
 	sprite.play("run" if absf(velocity.x) > 10 else "idle")
+	hint.world_offset = Vector2(0, -232 * gravity_sign)
+	_trail_time += delta
+	if _trail_time >= 0.1:
+		_trail_time = 0.0
+		_trail.push_front(global_position)
+		if _trail.size() > 4:
+			_trail.pop_back()
+	for i in _ghosts.size():
+		var ghost := _ghosts[i]
+		ghost.visible = _trail.size() > i + 1 and absf(velocity.x) > 25
+		if ghost.visible:
+			ghost.texture = sprite.sprite_frames.get_frame_texture(sprite.animation, sprite.frame)
+			ghost.position = to_local(_trail[i + 1]) + sprite.position
+			ghost.flip_h = sprite.flip_h
+			ghost.flip_v = sprite.flip_v
 	if global_position.y < -120 or global_position.y > 1200:
 		if not _reset_pending:
 			_reset_pending = true

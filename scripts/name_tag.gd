@@ -22,8 +22,8 @@ func _ready() -> void:
 	tag.text = value
 	tag.visible = not value.is_empty()
 	tag.add_theme_font_size_override("font_size", 16)
-	tag.add_theme_color_override("font_color", Color("#dce8ff"))
-	tag.add_theme_color_override("font_outline_color", Color("#070a10"))
+	tag.add_theme_color_override("font_color", Color("#e0e0e0"))
+	tag.add_theme_color_override("font_outline_color", Color("#090909"))
 	tag.add_theme_constant_override("outline_size", 4)
 	tag.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	tag.size = Vector2(260, 24)

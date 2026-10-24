@@ -1,5 +1,5 @@
 extends Area2D
-## A prism shrine checkpoint. Touching it updates the respawn point and writes
+## A room checkpoint. Touching it updates the respawn point and writes
 ## the run to user://mirror_save.cfg, so the title screen can continue later.
 
 signal activated

@@ -23,7 +23,7 @@ func _is_available() -> bool:
 
 func _on_mirror_changed(_value: bool) -> void:
 	visible = true
-	modulate.a = 1.0 if _mirror_state.mirrored == requires_mirror else 0.18
+	modulate.a = 1.0 if phase_independent or _mirror_state.mirrored == requires_mirror else 0.4
 
 func _physics_process(_delta: float) -> void:
 	var pressed := false

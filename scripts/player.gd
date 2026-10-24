@@ -13,6 +13,7 @@ const CROUCH_CENTER := Vector2(0.0, -50.0)
 const STAND_SPRITE_OFFSET := Vector2(-160.0, -342.0)
 const CROUCH_SPRITE_OFFSET := Vector2(-160.0, -327.0)
 
+const PUSH_SPEED := 120.0
 const RUN_SPEED := 220.0
 const SPRINT_SPEED := 340.0
 const CROUCH_SPEED := 80.0
@@ -44,6 +45,7 @@ var air_time := 0.0
 var land_timer := 0.0
 var current_animation := ""
 var is_crouching := false
+var is_pushing := false
 var respawn_position := Vector2.ZERO
 
 
@@ -74,6 +76,7 @@ func respawn() -> void:
 	coyote_timer = 0.0
 	jump_buffer_timer = 0.0
 	_set_crouching(false)
+	is_pushing = false
 	_play("idle")
 	respawned.emit()
 	resolve_overlap.call_deferred()
@@ -113,12 +116,17 @@ func _physics_process(delta: float) -> void:
 	# Crouching lowers the capsule on either side of gravity.
 	_set_crouching(Input.is_action_pressed("crouch") and was_on_floor)
 
-	var sprinting := Input.is_action_pressed("sprint") and absf(input_axis) > 0.01 and not is_crouching
+	is_pushing = false
+	for slab in get_tree().get_nodes_in_group("mirror_slabs"):
+		if slab.is_being_pushed_by(self, input_axis):
+			is_pushing = true
+			break
+	var sprinting := not is_pushing and Input.is_action_pressed("sprint") and absf(input_axis) > 0.01 and not is_crouching
 	if is_crouching:
 		var crawl_target := CROUCH_SPEED * input_axis
 		velocity.x = move_toward(velocity.x, crawl_target, GROUND_ACCEL * 0.6 * delta)
 	elif absf(input_axis) > 0.01:
-		var target_speed := (SPRINT_SPEED if sprinting else RUN_SPEED) * input_axis
+		var target_speed := (PUSH_SPEED if is_pushing else (SPRINT_SPEED if sprinting else RUN_SPEED)) * input_axis
 		var acceleration := GROUND_ACCEL if was_on_floor else AIR_ACCEL
 		velocity.x = move_toward(velocity.x, target_speed, acceleration * delta)
 	else:
@@ -189,7 +197,10 @@ func _set_crouching(value: bool) -> void:
 
 func _update_animation(delta: float, grounded: bool, sprinting: bool) -> void:
 	if grounded:
-		if is_crouching:
+		if is_pushing:
+			_play("idle")
+			sprite.speed_scale = 1.0
+		elif is_crouching:
 			_play("crouch")
 			sprite.speed_scale = 1.0
 		elif land_timer > 0.0:

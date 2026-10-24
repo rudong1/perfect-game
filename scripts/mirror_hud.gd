@@ -18,4 +18,4 @@ func _ready() -> void:
 
 func _on_mirror_changed(is_mirrored: bool) -> void:
 	status.text = "镜像：开" if is_mirrored else "镜像：关"
-	status.modulate = Color("#8ddcff") if is_mirrored else Color("#b9c7dd")
+	status.modulate = Color.WHITE if is_mirrored else Color("#bfbfbf")
