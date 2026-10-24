@@ -47,6 +47,10 @@ func load_level() -> void:
 	_background.set_shader_parameter("top_color", data.bg_top)
 	_background.set_shader_parameter("bottom_color", data.bg_bottom)
 	_background.set_shader_parameter("accent_color", data.accent)
+	_background.set_shader_parameter("light_color", data.get("light_color", data.accent))
+	_background.set_shader_parameter("light_dir", data.get("light_dir", -1.0))
+	_background.set_shader_parameter("saturation", data.get("saturation", 1.0))
+	_background.set_shader_parameter("fog_amount", data.get("fog", 0.0))
 	_background.set_shader_parameter("scene_texture", CHURCH_BACKGROUNDS[_state.current_level])
 	_background.set_shader_parameter("use_scene_texture", true)
 	$HUD/Chapter.text = data.title

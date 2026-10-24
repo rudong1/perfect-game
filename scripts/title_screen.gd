@@ -33,7 +33,8 @@ func _begin() -> void:
 	var state := get_node_or_null("/root/GameState")
 	if state != null:
 		state.call("begin_game", name_edit.text)
-	get_tree().change_scene_to_file("res://scenes/gameplay/gameplay.tscn")
+	# A new journey opens with the prologue, not the first room.
+	get_tree().change_scene_to_file("res://scenes/opening/opening.tscn")
 
 
 func _continue() -> void:

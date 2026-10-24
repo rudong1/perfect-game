@@ -131,10 +131,25 @@ func run() -> void:
 	await process_frame
 	state = root.get_node("GameState")
 	mirror = root.get_node("MirrorState")
-	state.begin_game("测试")
-	game = load("res://scenes/gameplay/gameplay.tscn").instantiate()
-	root.add_child(game)
-	current_scene = game
+	var title: Control = load("res://scenes/ui/title_screen.tscn").instantiate()
+	root.add_child(title)
+	current_scene = title
+	title.name_edit.text = "测试"
+	title.begin_button.pressed.emit()
+	await frames(8)
+	check(current_scene.scene_file_path.ends_with("opening.tscn"), "a new journey preserves the remote prologue")
+	check(not mirror.input_enabled and not mirror.mirrored, "prologue keeps gameplay mirroring disabled")
+	var enter := InputEventKey.new()
+	enter.keycode = KEY_ENTER
+	enter.pressed = true
+	Input.parse_input_event(enter)
+	await frames(3)
+	check(not current_scene._entering, "prologue ignores input carried over from the title")
+	await frames(50)
+	Input.parse_input_event(enter)
+	await frames(100)
+	game = current_scene
+	check(game.scene_file_path.ends_with("gameplay.tscn") and mirror.input_enabled, "Enter moves from the prologue into the playable church")
 	await frames(8)
 	var player: CharacterBody2D = game.player
 	var shadow: CharacterBody2D = game.echo
@@ -206,6 +221,12 @@ func run() -> void:
 	legacy.set_value("game", "checkpoint_position", Vector2(1540, 900))
 	legacy.save(state.SAVE_PATH)
 	check(state.load_from_disk() and state.collected_count() == 2 and not state.has_checkpoint, "old saves retain progress and discard stale checkpoints")
+	legacy.set_value("game", "version", 3)
+	legacy.set_value("game", "checkpoint_position", Vector2(3100, 900))
+	legacy.set_value("game", "checkpoint_stage", 2)
+	legacy.set_value("game", "collected_mask", 3)
+	legacy.save(state.SAVE_PATH)
+	check(state.load_from_disk() and state.collected_count() == 2 and not state.has_checkpoint, "scrolling-room saves migrate safely into the restored single-screen rooms")
 
 	var frames_resource: SpriteFrames = player.sprite.sprite_frames
 	check(frames_resource.get_frame_count("run") == 8 and frames_resource.get_frame_count("sprint") == 8, "eight actual run frames replace four-frame motion")

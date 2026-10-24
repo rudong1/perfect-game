@@ -222,7 +222,7 @@ func _rect_visual(parent: Node, point: Vector2, size: Vector2, color: Color) -> 
 				canvas.draw_set_transform(point + Vector2(x, size.y - 14))
 				_arch_visual(Vector2(86, 118), Color(color * 0.73, 1), Color(_palette.edge, 0.16))
 			canvas.draw_set_transform(Vector2.ZERO)
-	, Rect2(point, size), 4 + bays * 3 if bays > 0 else 1)
+	, Rect2(point, size), 4 + bays * 5 if bays > 0 else 1)
 
 func _arch_visual(size: Vector2, fill: Color, edge: Color) -> void:
 	var canvas: Node2D = get_meta("gothic_draw_target")
@@ -241,6 +241,17 @@ func _arch_visual(size: Vector2, fill: Color, edge: Color) -> void:
 	canvas.draw_colored_polygon(points, fill)
 	points.append(points[0])
 	canvas.draw_polyline(points, edge, 3, true)
+	# Inner bevel: a second contour pulled in from the outline reads as carved stone.
+	var center := Vector2(0, -size.y * 0.5)
+	var inner := PackedVector2Array()
+	for point in points:
+		inner.append(center + (point - center) * 0.93)
+	canvas.draw_polyline(inner, Color(edge, edge.a * 0.55), 1.5, true)
+	# Keystone at the apex.
+	var apex := Vector2(0, -size.y * 0.90)
+	canvas.draw_colored_polygon(PackedVector2Array([
+		apex + Vector2(-7, -6), apex + Vector2(7, -6), apex + Vector2(0, 12),
+	]), Color(edge, edge.a * 0.9))
 
 func _rose_window(center: Vector2, radius: float, tint: Color, seed: int) -> void:
 	var canvas: Node2D = get_meta("gothic_draw_target")
@@ -287,13 +298,13 @@ func _decor(parent: Node2D) -> void:
 	_candle_layer(parent)
 
 func _door_visual(owner: Node2D, size: Vector2) -> void:
-	var arch := _paint(owner, func() -> void: _arch_visual(Vector2(64, size.y), _palette.platform, _palette.edge), Rect2(-32, -size.y, 64, size.y), 2)
+	var arch := _paint(owner, func() -> void: _arch_visual(Vector2(64, size.y), _palette.platform, _palette.edge), Rect2(-32, -size.y, 64, size.y), 4)
 	arch.position = Vector2(size.x * 0.5, size.y)
 	_vertical_glow(owner, size.x, size.y)
 	_center_strip(owner, size.x, size.y)
 
 func _plate_visual(owner: Node2D, size: Vector2, tint: Color) -> void:
-	var support := _paint(owner, func() -> void: _arch_visual(Vector2(64, 143.4256), _palette.platform, Color(_palette.edge, 0.65)), Rect2(-32, -144, 64, 144), 2)
+	var support := _paint(owner, func() -> void: _arch_visual(Vector2(64, 143.4256), _palette.platform, Color(_palette.edge, 0.65)), Rect2(-32, -144, 64, 144), 4)
 	support.position.y = 12
 	if owner.position.y < 540:
 		support.scale.y = -1
@@ -301,11 +312,11 @@ func _plate_visual(owner: Node2D, size: Vector2, tint: Color) -> void:
 	_center_strip(owner, size.x * 0.6, 5)
 
 func _checkpoint_visual(owner: Node2D) -> void:
-	var shrine := _paint(owner, func() -> void: _arch_visual(Vector2(64, 143.4256), _palette.platform, _palette.edge), Rect2(-32, -144, 64, 144), 2)
+	var shrine := _paint(owner, func() -> void: _arch_visual(Vector2(64, 143.4256), _palette.platform, _palette.edge), Rect2(-32, -144, 64, 144), 4)
 	shrine.position.y = 50
 
 func _exit_visual(owner: Node2D) -> void:
-	var portal := _paint(owner, func() -> void: _arch_visual(Vector2(64, 143.4256), _palette.platform, _palette.edge), Rect2(-32, -144, 64, 144), 2)
+	var portal := _paint(owner, func() -> void: _arch_visual(Vector2(64, 143.4256), _palette.platform, _palette.edge), Rect2(-32, -144, 64, 144), 4)
 	portal.name = "ExitVisual"
 	portal.position.y = 68
 

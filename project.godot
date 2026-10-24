@@ -12,7 +12,7 @@ config_version=5
 
 config/name="perfect_game"
 run/main_scene="res://scenes/ui/title_screen.tscn"
-config/features=PackedStringArray("4.7", "C#", "Mobile")
+config/features=PackedStringArray("4.7", "Mobile")
 config/icon="res://icon.svg"
 
 [autoload]
@@ -33,7 +33,7 @@ project/assembly_name="perfect_game"
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/godot_mcp/plugin.cfg")
+enabled=PackedStringArray()
 
 [gui]
 
