@@ -23,6 +23,10 @@ window/stretch/aspect="expand"
 
 project/assembly_name="perfect_game"
 
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/godot_mcp/plugin.cfg")
+
 [physics]
 
 3d/physics_engine="Jolt Physics"
