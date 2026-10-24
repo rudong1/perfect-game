@@ -57,7 +57,7 @@ func _ready() -> void:
 	hint = CanvasLayer.new()
 	hint.set_script(preload("res://scripts/readable_hint.gd"))
 	hint.target = self
-	hint.text = "影子 · 晚一步跟随"
+	hint.text = "镜中的女孩 · 影子晚一步跟随"
 	hint.tint = Color("#e4e4e4")
 	add_child(hint)
 	reset_echo()

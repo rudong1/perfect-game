@@ -8,6 +8,7 @@ const HINT = preload("res://scripts/readable_hint.gd")
 const CHECKPOINT = preload("res://scripts/checkpoint.gd")
 const SLAB = preload("res://scripts/mirror_slab.gd")
 const CIRCUIT = preload("res://scripts/prism_circuit.gd")
+const REGION_DRESSING = preload("res://scripts/region_dressing.gd")
 const WORLD_WIDTH := 1920.0
 var _palette: Dictionary
 
@@ -123,7 +124,6 @@ func _checkpoint(parent: Node2D) -> void:
 	area.add_child(collision)
 	_checkpoint_visual(area)
 	parent.add_child(area)
-	_hint(area, "存档点", Vector2(0, -36), Color("#cbcbcb"))
 
 func _hint(target: Node2D, text: String, offset: Vector2, tint: Color) -> CanvasLayer:
 	var hint := CanvasLayer.new()
@@ -296,6 +296,14 @@ func _decor(parent: Node2D) -> void:
 	# The detailed cathedral is now a background plate, without baked actors,
 	# gates, checkpoints or platforms. Only actual game nodes draw those.
 	_candle_layer(parent)
+	var dressing := Node2D.new()
+	dressing.name = "RegionDressing"
+	dressing.set_script(REGION_DRESSING)
+	dressing.region = get_node("/root/GameState").current_level
+	dressing.stone = _palette.platform
+	dressing.edge = _palette.edge
+	dressing.z_index = -2
+	parent.add_child(dressing)
 
 func _door_visual(owner: Node2D, size: Vector2) -> void:
 	var arch := _paint(owner, func() -> void: _arch_visual(Vector2(64, size.y), _palette.platform, _palette.edge), Rect2(-32, -size.y, 64, size.y), 4)
@@ -314,6 +322,12 @@ func _plate_visual(owner: Node2D, size: Vector2, tint: Color) -> void:
 func _checkpoint_visual(owner: Node2D) -> void:
 	var shrine := _paint(owner, func() -> void: _arch_visual(Vector2(64, 143.4256), _palette.platform, _palette.edge), Rect2(-32, -144, 64, 144), 4)
 	shrine.position.y = 50
+	_paint(owner, func() -> void:
+		var canvas: Node2D = get_meta("gothic_draw_target")
+		var glyph := PackedVector2Array([Vector2(0, -55), Vector2(10, -40), Vector2(0, -25), Vector2(-10, -40), Vector2(0, -55)])
+		canvas.draw_polyline(glyph, Color("#D7C691"), 2, true)
+		canvas.draw_line(Vector2(-13, -15), Vector2(13, -15), Color("#D7C691"), 2)
+	, Rect2(-15, -57, 30, 44), 2)
 
 func _exit_visual(owner: Node2D) -> void:
 	var portal := _paint(owner, func() -> void: _arch_visual(Vector2(64, 143.4256), _palette.platform, _palette.edge), Rect2(-32, -144, 64, 144), 4)

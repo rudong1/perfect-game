@@ -14,7 +14,7 @@ const LEVELS := [
 	{
 		"title": "无色 · 双生门廊",
 		"objective": "按 M 换面，与晚一步的分身同时压住上下踏板，找到红色。",
-		"story_before": "世界还只有黑白。她向前走，影子晚一步才跟上。",
+		"story_before": "「跟着我，{name}。从今天起，我就是你的倒影。」",
 		"color_name": "红色",
 		"collect_color": Color("#FF637E"),
 		"bg_top": Color("#08090C"),
@@ -30,7 +30,7 @@ const LEVELS := [
 	{
 		"title": "赤 · 推镜廊",
 		"objective": "推动立镜改变反射轴，按 E 穿过镜面，找到蓝色。",
-		"story_before": "红色回到了房间的边缘。蓝色还藏在她们的回声里。",
+		"story_before": "「原来红色这么暖……我已经快忘记了。」她的手在镜面上多停了一会儿。",
 		"color_name": "蓝色",
 		"collect_color": Color("#59CFFF"),
 		"bg_top": Color("#1A070D"),
@@ -46,7 +46,7 @@ const LEVELS := [
 	{
 		"title": "青 · 三色回响",
 		"objective": "按 M 调整最近的反射镜，并移动立镜避开光路，让三色同时抵达。",
-		"story_before": "蓝色像夜雨一样漫进镜面。绿色在下一次翻转之后。",
+		"story_before": "「有了全部颜色，就能离开这里。」她没有说，是谁能够离开。",
 		"color_name": "绿色",
 		"collect_color": Color("#73E2A5"),
 		"bg_top": Color("#04101F"),
@@ -62,7 +62,7 @@ const LEVELS := [
 	{
 		"title": "翠 · 最后的同行",
 		"objective": "完成分身配合、推镜传送与三色光路，走出绿色教堂。",
-		"story_before": "最后一种颜色已经回来。她和影子沿着绿色的光继续向前。",
+		"story_before": "出口近了。那个总比你晚半拍的脚步声，第一次追上了你。",
 		"color_name": "",
 		"collect_color": Color("#C9E8A0"),
 		"bg_top": Color("#0A1811"),
@@ -87,6 +87,7 @@ var checkpoint_position := Vector2.ZERO
 var has_checkpoint := false
 var light_puzzle_active := false
 var light_channels := 0
+var ending_reached := false
 
 func begin_game(name: String) -> void:
 	end_light_puzzle()
@@ -94,6 +95,7 @@ func begin_game(name: String) -> void:
 	current_level = 0
 	completed_levels = 0
 	collected_mask = 0
+	ending_reached = false
 	clear_save()
 	changed.emit()
 
@@ -141,7 +143,17 @@ func save_checkpoint(level_index: int, position: Vector2, stage: int = 0) -> voi
 	checkpoint_saved.emit(position)
 
 func is_game_complete() -> bool:
-	return current_level >= MAX_LEVELS
+	return current_level >= MAX_LEVELS and ending_reached
+
+func is_finale_pending() -> bool:
+	return current_level >= MAX_LEVELS and not ending_reached
+
+func complete_journey() -> void:
+	if current_level < MAX_LEVELS:
+		return
+	ending_reached = true
+	_save_game()
+	changed.emit()
 
 func has_save() -> bool:
 	return FileAccess.file_exists(SAVE_PATH)
@@ -156,6 +168,7 @@ func load_from_disk() -> bool:
 	# Old room layouts had different checkpoints. Retain journey progress but
 	# place the player at the new room's entrance when migrating an old save.
 	var version := int(config.get_value("game", "version", 1))
+	ending_reached = bool(config.get_value("game", "ending_reached", false)) if version >= 5 else false
 	collected_mask = int(config.get_value("game", "collected_mask", (1 << mini(current_level, COLOR_COUNT)) - 1)) & 7
 	checkpoint_level = int(config.get_value("game", "checkpoint_level", -1)) if version >= 4 else -1
 	checkpoint_position = config.get_value("game", "checkpoint_position", Vector2.ZERO) if version >= 4 else Vector2.ZERO
@@ -167,9 +180,9 @@ func load_from_disk() -> bool:
 
 func _save_game() -> void:
 	var config := ConfigFile.new()
-	for key in ["player_name", "current_level", "completed_levels", "collected_mask", "checkpoint_stage", "checkpoint_level", "checkpoint_position", "has_checkpoint"]:
+	for key in ["player_name", "current_level", "completed_levels", "collected_mask", "checkpoint_stage", "checkpoint_level", "checkpoint_position", "has_checkpoint", "ending_reached"]:
 		config.set_value("game", key, get(key))
-	config.set_value("game", "version", 4)
+	config.set_value("game", "version", 5)
 	var err := config.save(SAVE_PATH)
 	if err != OK:
 		push_warning("Could not write save file (error %d)" % err)

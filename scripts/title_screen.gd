@@ -41,4 +41,10 @@ func _continue() -> void:
 	var state := get_node_or_null("/root/GameState")
 	if state == null or not bool(state.call("load_from_disk")):
 		return
+	if state.is_finale_pending():
+		get_tree().change_scene_to_file("res://scenes/finale/finale.tscn")
+		return
+	if state.is_game_complete():
+		get_tree().change_scene_to_file("res://scenes/ui/ending_screen.tscn")
+		return
 	get_tree().change_scene_to_file("res://scenes/gameplay/gameplay.tscn")

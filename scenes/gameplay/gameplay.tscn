@@ -85,7 +85,7 @@ offset_bottom = 104.0
 horizontal_alignment = 2
 theme_override_font_sizes/font_size = 18
 modulate = Color(0.9, 0.9, 0.9, 1)
-text = "银白拖影是你的影子：晚一步跟随，不会跳跃"
+text = "镜中的女孩是你的倒影：晚半拍跟随，不会跳跃"
 
 [node name="Controls" type="Label" parent="HUD"]
 offset_left = 48.0

@@ -3,6 +3,12 @@ extends Control
 ## middle is the mirror. No character here — just the place, waiting.
 
 const NEXT_SCENE := "res://scenes/gameplay/gameplay.tscn"
+const STORY_LINES := [
+	"很久很久以前，一个女孩掉进了镜面世界。\n她走过教堂的每一条回廊，却始终解不开出口前的谜。",
+	"她等了很久，久到颜色褪去，连自己的名字也不愿再提。\n直到某一天，第二个倒霉蛋从镜中跌落。",
+	"「{name}……这是你的名字吗？」\n「我帮你。一个人走不出去的地方，就让两个人一起试试。」",
+	"她把手贴上镜面，站到了你的另一侧。\n「从今天起，我就是你的倒影。」",
+]
 
 @onready var gate: Sprite2D = $Gate
 @onready var caption: Label = $Caption
@@ -12,9 +18,13 @@ var _gate_material: ShaderMaterial
 var _entering := false
 var _armed := false
 var _clock := 0.0
+var story_index := 0
+var _prompt: Label
 
 
 func _ready() -> void:
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	caption.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_gate_material = gate.material as ShaderMaterial
 	# This is not the mirror world yet; keep M from flipping the frame.
 	var mirror := get_node_or_null("/root/MirrorState")
@@ -23,10 +33,26 @@ func _ready() -> void:
 		mirror.call("set_mirrored", false)
 	caption.modulate.a = 1.0
 	fade.color = Color(0, 0, 0, 0)
-	# Prompt pulses gently so it reads as an invitation.
-	var pulse := create_tween().set_loops()
-	pulse.tween_property(caption, "modulate:a", 0.55, 1.1)
-	pulse.tween_property(caption, "modulate:a", 1.0, 1.1)
+	var shade := ColorRect.new()
+	shade.position = Vector2(0, 735)
+	shade.size = Vector2(1920, 345)
+	shade.color = Color(0.02, 0.025, 0.035, 0.9)
+	shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(shade)
+	move_child(shade, caption.get_index())
+	caption.position = Vector2(200, 792)
+	caption.size = Vector2(1520, 150)
+	caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	caption.add_theme_font_size_override("font_size", 28)
+	caption.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_prompt = Label.new()
+	_prompt.position = Vector2(1340, 1005)
+	_prompt.size = Vector2(380, 40)
+	_prompt.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_prompt.add_theme_font_size_override("font_size", 20)
+	_prompt.modulate = Color("#B6B7BD")
+	add_child(_prompt)
+	_show_story_line()
 	# Swallow any stray input from the scene handover before listening.
 	await get_tree().create_timer(0.7).timeout
 	_armed = true
@@ -50,9 +76,21 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.keycode == KEY_ENTER or event.keycode == KEY_KP_ENTER:
-			_enter()
+			_advance_story()
 			return
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		_advance_story()
+
+
+func _show_story_line() -> void:
+	caption.text = get_node("/root/GameState").format_story(STORY_LINES[story_index])
+	_prompt.text = "Enter / 点击继续  %d / %d" % [story_index + 1, STORY_LINES.size()]
+
+func _advance_story() -> void:
+	if story_index + 1 < STORY_LINES.size():
+		story_index += 1
+		_show_story_line()
+	else:
 		_enter()
 
 
@@ -61,6 +99,7 @@ func _enter() -> void:
 		return
 	_entering = true
 	caption.text = ""
+	_prompt.visible = false
 	_gate_material.set_shader_parameter("ripple", 1.0)
 	var tween := create_tween()
 	tween.set_parallel(true)

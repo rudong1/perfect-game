@@ -36,8 +36,11 @@ func _ready() -> void:
 	load_level()
 
 func load_level() -> void:
+	if _state.is_finale_pending():
+		get_tree().change_scene_to_file.call_deferred("res://scenes/finale/finale.tscn")
+		return
 	if _state.is_game_complete():
-		get_tree().change_scene_to_file("res://scenes/ui/ending_screen.tscn")
+		get_tree().change_scene_to_file.call_deferred("res://scenes/ui/ending_screen.tscn")
 		return
 	_busy = false
 	_mirror.input_enabled = true
@@ -56,7 +59,7 @@ func load_level() -> void:
 	$HUD/Chapter.text = data.title
 	$HUD/Chapter.modulate = data.accent
 	$HUD/Objective.text = data.objective
-	$HUD/Story.text = data.story_before
+	$HUD/Story.text = _state.format_story(data.story_before)
 	var result: Dictionary = builder.build(_state.current_level, level_root)
 	_world_width = result.width
 	var spawn: Vector2 = result.spawn
@@ -75,7 +78,7 @@ func _on_color_found() -> void:
 	_mirror.input_enabled = false
 	player.set_physics_process(false)
 	if _goal.is_exit:
-		_show_toast("和影子一起走出镜面", _state.get_level().accent)
+		_show_toast("出口出现了。身后的脚步，却没有停。", _state.get_level().accent)
 	else:
 		_state.collect_current_color()
 		_show_toast("找到" + _state.get_level().color_name, _state.get_level().collect_color)

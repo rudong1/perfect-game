@@ -47,7 +47,7 @@ offset_top = 350.0
 offset_right = 978.0
 offset_bottom = 530.0
 theme_override_font_sizes/font_size = 24
-text = "世界最初只有黑白。少女和晚一步跟随的影子一起翻越镜面，依次找回红、蓝、绿，让颜色慢慢回到房间。"
+text = "很久以前，一个女孩掉进了镜面世界。\n许多年后，她终于等来了第二个倒霉蛋。\n这一次，你将成为那个后来者。"
 autowrap_mode = 2
 
 [node name="NameLabel" type="Label" parent="." unique_id=747342136]
@@ -58,7 +58,7 @@ offset_top = 570.0
 offset_right = 490.0
 offset_bottom = 600.0
 theme_override_font_sizes/font_size = 18
-text = "她的名字（可留空）"
+text = "为新坠入镜面的女孩命名（可留空）"
 
 [node name="NameEdit" type="LineEdit" parent="." unique_id=1290546851]
 layout_mode = 0

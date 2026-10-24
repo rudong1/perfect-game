@@ -146,7 +146,11 @@ func run() -> void:
 	await frames(3)
 	check(not current_scene._entering, "prologue ignores input carried over from the title")
 	await frames(50)
-	Input.parse_input_event(enter)
+	for i in current_scene.STORY_LINES.size():
+		Input.parse_input_event(enter)
+		await frames(2)
+		if i == 1:
+			check(current_scene.caption.text.contains("测试") and not current_scene.caption.text.contains("darksky"), "the named newcomer meets a reflection whose true name is still withheld")
 	await frames(100)
 	game = current_scene
 	check(game.scene_file_path.ends_with("gameplay.tscn") and mirror.input_enabled, "Enter moves from the prologue into the playable church")
@@ -227,6 +231,11 @@ func run() -> void:
 	legacy.set_value("game", "collected_mask", 3)
 	legacy.save(state.SAVE_PATH)
 	check(state.load_from_disk() and state.collected_count() == 2 and not state.has_checkpoint, "scrolling-room saves migrate safely into the restored single-screen rooms")
+	legacy.set_value("game", "version", 4)
+	legacy.set_value("game", "current_level", 4)
+	legacy.set_value("game", "collected_mask", 7)
+	legacy.save(state.SAVE_PATH)
+	check(state.load_from_disk() and state.is_finale_pending() and state.collected_count() == 3, "previously finished saves can enter the new finale with their colours preserved")
 
 	var frames_resource: SpriteFrames = player.sprite.sprite_frames
 	check(frames_resource.get_frame_count("run") == 8 and frames_resource.get_frame_count("sprint") == 8, "eight actual run frames replace four-frame motion")
@@ -299,6 +308,15 @@ func run() -> void:
 		check(get_nodes_in_group("shadow_bridges").is_empty() and not game.level_root.has_node("ShadowBarrier"), "campaign restores the original three mechanics")
 		check(bool(game._background.get_shader_parameter("use_scene_texture")) and game._background.get_shader_parameter("scene_texture") == game.CHURCH_BACKGROUNDS[index], "world uses its authored cathedral background")
 		check(game.CHURCH_BACKGROUNDS[index].get_width() >= 1600 and game._world_width == 1920, "background and room retain the single-screen composition")
+		check(game.level_root.get_node("RegionDressing").region == index, "each colour region has distinct physical-looking set dressing")
+		var draw_calls := 80
+		for visual in get_nodes_in_group("gothic_visuals"):
+			draw_calls += int(visual.get_meta("draw_calls"))
+		check(draw_calls < 300, "region set dressing remains inside the drawing budget")
+		var has_save_label := false
+		for label in text_nodes(game):
+			has_save_label = has_save_label or label.text == "存档点"
+		check(not has_save_label, "save shrines use a symbol without a floating text label")
 		if index < 3:
 			unique_colors.append(state.get_level().collect_color)
 		var puzzle: Node = game.level_root.get_node("RoomPuzzle")
@@ -334,7 +352,54 @@ func run() -> void:
 		await frames(60)
 		check(state.current_level == index + 1, "color pickup advances without prism intermission")
 	check(unique_colors.size() == 3 and unique_colors[0].r > unique_colors[0].b and unique_colors[1].b > unique_colors[1].r and unique_colors[2].g > unique_colors[2].r, "collectibles are exactly red, blue, green in order")
-	check(state.is_game_complete() and current_scene.scene_file_path.ends_with("ending_screen.tscn"), "green world reaches ending after three color transitions")
-	check(state.load_from_disk() and state.collected_count() == 3 and state.current_level == 4, "color collection and final progress round-trip through save")
+	check(state.is_finale_pending() and not state.is_game_complete() and current_scene.scene_file_path.ends_with("finale.tscn"), "green-world exit leads to the playable betrayal instead of prematurely completing the story")
+	check(state.load_from_disk() and state.is_finale_pending() and state.collected_count() == 3, "an unfinished finale resumes with all colours intact")
+	change_scene_to_file("res://scenes/ui/title_screen.tscn")
+	await frames(6)
+	state.collected_mask = 0
+	state.ending_reached = true
+	current_scene._continue()
+	await frames(6)
+	check(current_scene.scene_file_path.ends_with("finale.tscn") and state.collected_count() == 3, "Continue actually reloads the saved chase instead of restarting the puzzles")
+	var chase: Node2D = current_scene
+	check(not Geometry2D.triangulate_polygon(chase.mirror_body._outline).is_empty(), "the giant mirror's sampled arch triangulates into visible glass")
+	check(chase.phase == chase.Phase.BETRAYAL and chase.shadow.position.x < chase.player.position.x, "the reflection steps onto the same floor behind the protagonist")
+	await frames(50)
+	Input.action_press("move_right")
+	await frames(40)
+	Input.action_release("move_right")
+	for tick in 180:
+		await physics_frame
+		if chase.attempts > 0:
+			break
+	check(chase.attempts == 1 and state.collected_count() == 3, "being caught retries the chase without losing any collected colour")
+	await frames(45)
+	Input.action_press("move_right")
+	Input.action_press("sprint")
+	for tick in 900:
+		await physics_frame
+		if chase.phase == chase.Phase.SHATTER:
+			break
+	release_controls()
+	check(chase.mirror_body.is_broken and chase.player.position.x >= chase.MIRROR_X - 180, "actual rightward movement reaches and shatters the giant blocking mirror")
+	var glass_is_valid: bool = not chase.mirror_body._shards.is_empty()
+	for shard in chase.mirror_body._shards:
+		glass_is_valid = glass_is_valid and not Geometry2D.triangulate_polygon(shard.points).is_empty()
+	check(glass_is_valid, "all clipped glass fragments remain valid renderable polygons")
+	await frames(70)
+	check(chase.phase == chase.Phase.FAREWELL and not chase.shadow.visible, "breaking the mirror makes the pursuing reflection disappear")
+	check(chase._caption.text == "也许，这也算是不错的告别吧。", "the reflection speaks the requested farewell after the chase")
+	check(not state.is_game_complete(), "the finale waits for the goodbye before marking the journey complete")
+	chase._next.pressed.emit()
+	check(chase._caption.text.contains("darksky") and chase.farewell_index == 1, "darksky is revealed as the reflection's true name only in the final line")
+	chase._next.pressed.emit()
+	await frames(6)
+	check(state.is_game_complete() and current_scene.scene_file_path.ends_with("ending_screen.tscn"), "leaving the broken mirror completes the narrative ending")
+	check(state.load_from_disk() and state.ending_reached and state.collected_count() == 3 and state.current_level == 4, "completed goodbye and colours round-trip through save")
+	change_scene_to_file("res://scenes/ui/title_screen.tscn")
+	await frames(6)
+	current_scene._continue()
+	await frames(6)
+	check(current_scene.scene_file_path.ends_with("ending_screen.tscn") and state.is_game_complete(), "a completed save resumes after the goodbye instead of replaying the pursuit")
 	print("MIRROR TESTS: %d checks, %d failures" % [checks, failures])
 	quit(1 if failures else 0)

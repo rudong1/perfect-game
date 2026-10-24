@@ -21,8 +21,8 @@ func _ready() -> void:
 	if state != null:
 		name_text = str(state.get("player_name"))
 	var count: int = state.collected_count() if state != null else 0
-	$Subtitle.text = "全部色彩已收集" if count == 3 else "旅程结束 · 收集了 %d / 3 种颜色" % count
-	story.text = "雨停了。%s 和影子走出镜面。\n她们一起找回了 %d 种颜色。" % [name_text, count]
+	$Subtitle.text = "色彩仍然属于你" if count == 3 else "旅程结束 · 收集了 %d / 3 种颜色" % count
+	story.text = "巨镜碎裂，追逐你的倒影也消失了。\n%s 带着找回的颜色，走出了教堂。\n\n她曾与你同行，也曾想夺走这一切。\n最后留下的，只有她的名字：darksky。" % name_text
 	restart.pressed.connect(_restart)
 
 

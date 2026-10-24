@@ -23,10 +23,10 @@ modulate = Color(0.96862745, 0.9843137, 1, 1)
 layout_mode = 0
 offset_left = 120.0
 offset_top = 110.0
-offset_right = 720.0
+offset_right = 1220.0
 offset_bottom = 330.0
-theme_override_font_sizes/font_size = 180
-text = "虹"
+theme_override_font_sizes/font_size = 92
+text = "镜碎之后"
 
 [node name="Subtitle" type="Label" parent="." unique_id=881712363]
 modulate = Color(0.8392157, 0.8980392, 0.9490196, 1)
@@ -44,16 +44,16 @@ layout_mode = 0
 offset_left = 130.0
 offset_top = 430.0
 offset_right = 930.0
-offset_bottom = 580.0
+offset_bottom = 660.0
 theme_override_font_sizes/font_size = 26
 autowrap_mode = 2
 
 [node name="Restart" type="Button" parent="." unique_id=278404937]
 layout_mode = 0
 offset_left = 130.0
-offset_top = 640.0
+offset_top = 720.0
 offset_right = 430.0
-offset_bottom = 708.0
+offset_bottom = 788.0
 theme_override_font_sizes/font_size = 24
 text = "再走一次"
 
