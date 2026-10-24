@@ -1,0 +1,42 @@
+[gd_scene format=3 uid="uid://bsvirws8cjmwv"]
+
+[ext_resource type="Script" uid="uid://cojpmlmumpf83" path="res://scripts/player.gd" id="1_lvxji"]
+[ext_resource type="SpriteFrames" uid="uid://ewk67rbhlqef" path="res://assets/characters/hero/hero_frames.tres" id="3_75vfm"]
+[ext_resource type="Shape2D" uid="uid://code7mrve10yy" path="res://assets/characters/hero/hero_capsule.tres" id="4_0owmy"]
+[ext_resource type="Script" uid="uid://peyyblkeltml" path="res://scripts/screen_mirror.gd" id="4_lvxji"]
+[ext_resource type="Script" path="res://scripts/name_tag.gd" id="5_p47bc"]
+
+[node name="Player" type="CharacterBody2D" unique_id=494285525 groups=["player"]]
+floor_snap_length = 8.0
+script = ExtResource("1_lvxji")
+
+[node name="Sprite" type="AnimatedSprite2D" parent="." unique_id=336014150]
+scale = Vector2(0.62, 0.62)
+sprite_frames = ExtResource("3_75vfm")
+animation = &"idle"
+frame_progress = 0.3826286
+centered = false
+offset = Vector2(-160, -342)
+
+[node name="Collision" type="CollisionShape2D" parent="." unique_id=16815811]
+position = Vector2(0, -75)
+shape = ExtResource("4_0owmy")
+
+[node name="ScreenMirror" type="CanvasLayer" parent="." unique_id=829768934]
+layer = 100
+script = ExtResource("4_lvxji")
+
+[node name="BackBufferCopy" type="BackBufferCopy" parent="ScreenMirror" unique_id=101562923]
+
+[node name="Overlay" type="ColorRect" parent="ScreenMirror" unique_id=1363090470]
+visible = false
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+
+[node name="NameTagLayer" type="CanvasLayer" parent="." unique_id=1681105615]
+layer = 105
+script = ExtResource("5_p47bc")
+
+[node name="NameTag" type="Label" parent="NameTagLayer" unique_id=2057479431]

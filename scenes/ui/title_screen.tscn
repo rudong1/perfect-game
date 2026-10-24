@@ -1,0 +1,105 @@
+[gd_scene format=3 uid="uid://btavnacadmb34"]
+
+[ext_resource type="Script" uid="uid://cpk3aetjjyr15" path="res://scripts/title_screen.gd" id="1_aqpy5"]
+[ext_resource type="Script" uid="uid://breh7cxxcjmqw" path="res://scripts/prism_visual.gd" id="2_w8uqo"]
+
+[node name="TitleScreen" type="Control" unique_id=1651891657]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("1_aqpy5")
+
+[node name="Backdrop" type="ColorRect" parent="." unique_id=700029969]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+color = Color(0.015686275, 0.023529412, 0.039215688, 1)
+
+[node name="PrismArt" type="Control" parent="." unique_id=1199033029]
+anchors_preset = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+script = ExtResource("2_w8uqo")
+
+[node name="Title" type="Label" parent="." unique_id=201759118]
+modulate = Color(0.9490196, 0.96862745, 1, 1)
+layout_mode = 0
+offset_left = 120.0
+offset_top = 130.0
+offset_right = 1220.0
+offset_bottom = 260.0
+theme_override_font_sizes/font_size = 92
+text = "五色棱镜"
+
+[node name="Subtitle" type="Label" parent="." unique_id=1132698168]
+modulate = Color(0.56078434, 0.6392157, 0.7490196, 1)
+layout_mode = 0
+offset_left = 130.0
+offset_top = 270.0
+offset_right = 1030.0
+offset_bottom = 310.0
+theme_override_font_sizes/font_size = 22
+text = "PRISM  /  A MIRROR JOURNEY"
+
+[node name="Story" type="Label" parent="." unique_id=2122331027]
+modulate = Color(0.78039217, 0.83137256, 0.90588236, 1)
+layout_mode = 0
+offset_left = 130.0
+offset_top = 350.0
+offset_right = 978.0
+offset_bottom = 530.0
+theme_override_font_sizes/font_size = 24
+text = "镜之国的颜色被一场倒流的雨洗去。少女在无色的房间醒来，只有一束白光指向镜面。穿过五重镜域，把颜色带回世界。"
+autowrap_mode = 2
+
+[node name="NameLabel" type="Label" parent="." unique_id=747342136]
+modulate = Color(0.62352943, 0.6901961, 0.78431374, 1)
+layout_mode = 0
+offset_left = 130.0
+offset_top = 570.0
+offset_right = 490.0
+offset_bottom = 600.0
+theme_override_font_sizes/font_size = 18
+text = "她的名字（可留空）"
+
+[node name="NameEdit" type="LineEdit" parent="." unique_id=1290546851]
+layout_mode = 0
+offset_left = 130.0
+offset_top = 608.0
+offset_right = 630.0
+offset_bottom = 672.0
+theme_override_font_sizes/font_size = 24
+placeholder_text = "输入名字"
+max_length = 16
+
+[node name="Begin" type="Button" parent="." unique_id=218674990]
+layout_mode = 0
+offset_left = 130.0
+offset_top = 700.0
+offset_right = 430.0
+offset_bottom = 768.0
+theme_override_font_sizes/font_size = 24
+text = "踏入镜中"
+
+[node name="Controls" type="Label" parent="." unique_id=1964964335]
+modulate = Color(0.5176471, 0.5803922, 0.6666667, 1)
+layout_mode = 0
+offset_left = 130.0
+offset_top = 990.0
+offset_right = 1430.0
+offset_bottom = 1020.0
+theme_override_font_sizes/font_size = 16
+text = "A / D  移动      W / ↑  跳跃      S / ↓  蹲下      M  翻转镜面"
+
+[node name="Continue" type="Button" parent="." unique_id=2027825224]
+visible = false
+layout_mode = 0
+offset_left = 450.0
+offset_top = 700.0
+offset_right = 750.0
+offset_bottom = 768.0
+theme_override_font_sizes/font_size = 24
+text = "继续旅程"

@@ -1,0 +1,63 @@
+[gd_scene format=3 uid="uid://x2vfuevfstu5"]
+
+[ext_resource type="Script" path="res://scripts/ending_screen.gd" id="1_pyjtg"]
+[ext_resource type="Script" uid="uid://breh7cxxcjmqw" path="res://scripts/prism_visual.gd" id="2_7f101"]
+
+[node name="EndingScreen" type="Control" unique_id=1552134924]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("1_pyjtg")
+
+[node name="Backdrop" type="ColorRect" parent="." unique_id=200704935]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+
+[node name="PrismArt" type="Control" parent="." unique_id=1184265748]
+anchors_preset = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+script = ExtResource("2_7f101")
+
+[node name="Title" type="Label" parent="." unique_id=289117379]
+modulate = Color(0.96862745, 0.9843137, 1, 1)
+layout_mode = 0
+offset_left = 120.0
+offset_top = 110.0
+offset_right = 720.0
+offset_bottom = 330.0
+theme_override_font_sizes/font_size = 180
+text = "虹"
+
+[node name="Subtitle" type="Label" parent="." unique_id=881712363]
+modulate = Color(0.8392157, 0.8980392, 0.9490196, 1)
+layout_mode = 0
+offset_left = 130.0
+offset_top = 345.0
+offset_right = 930.0
+offset_bottom = 395.0
+theme_override_font_sizes/font_size = 32
+text = "全部色彩已收集"
+
+[node name="Story" type="Label" parent="." unique_id=76223608]
+modulate = Color(0.78039217, 0.83137256, 0.90588236, 1)
+layout_mode = 0
+offset_left = 130.0
+offset_top = 430.0
+offset_right = 930.0
+offset_bottom = 580.0
+theme_override_font_sizes/font_size = 26
+autowrap_mode = 2
+
+[node name="Restart" type="Button" parent="." unique_id=278404937]
+layout_mode = 0
+offset_left = 130.0
+offset_top = 640.0
+offset_right = 430.0
+offset_bottom = 708.0
+theme_override_font_sizes/font_size = 24
+text = "再走一次"

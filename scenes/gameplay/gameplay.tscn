@@ -1,0 +1,183 @@
+[gd_scene format=3 uid="uid://ckuw1d85p001t"]
+
+[ext_resource type="Script" uid="uid://dnsqyx2sbi2bb" path="res://scripts/gameplay.gd" id="1_gh441"]
+[ext_resource type="Script" uid="uid://oq1ivd3ln5cj" path="res://scripts/level_builder.gd" id="2_pa1on"]
+[ext_resource type="PackedScene" uid="uid://bsvirws8cjmwv" path="res://scenes/player/player.tscn" id="3_elju3"]
+[ext_resource type="Script" uid="uid://cojpmlmumpf83" path="res://scripts/player.gd" id="4_lb4ud"]
+[ext_resource type="Script" uid="uid://bhyi3uc77dlo0" path="res://scripts/mirror_hud.gd" id="5_bhb63"]
+[ext_resource type="Script" uid="uid://cehlwnlyghsp2" path="res://scripts/prism_overlay.gd" id="6_i6m2i"]
+[ext_resource type="Script" uid="uid://breh7cxxcjmqw" path="res://scripts/prism_visual.gd" id="7_td3fc"]
+
+[node name="Gameplay" type="Node2D" unique_id=1531499563]
+script = ExtResource("1_gh441")
+
+[node name="Backdrop" type="CanvasLayer" parent="." unique_id=590530262]
+layer = -10
+
+[node name="Base" type="ColorRect" parent="Backdrop" unique_id=1958340973]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+color = Color(0.019607844, 0.02745098, 0.047058824, 1)
+
+[node name="LevelRoot" type="Node2D" parent="." unique_id=1457781329]
+
+[node name="Camera" type="Camera2D" parent="." unique_id=738321851]
+position = Vector2(960, 540)
+
+[node name="LevelBuilder" type="Node" parent="." unique_id=352939332]
+script = ExtResource("2_pa1on")
+
+[node name="Player" type="CharacterBody2D" parent="." unique_id=494285525 groups=["player"] instance=ExtResource("3_elju3")]
+z_index = 1
+position = Vector2(180, 900)
+floor_snap_length = 8.0
+script = ExtResource("4_lb4ud")
+
+[node name="HUD" type="CanvasLayer" parent="." unique_id=1246424669]
+layer = 110
+script = ExtResource("5_bhb63")
+
+[node name="TopShade" type="ColorRect" parent="HUD" unique_id=912626680]
+offset_right = 1920.0
+offset_bottom = 236.0
+mouse_filter = 2
+color = Color(0.019607844, 0.02745098, 0.047058824, 0.65882355)
+
+[node name="Chapter" type="Label" parent="HUD" unique_id=1348285421]
+offset_left = 64.0
+offset_top = 32.0
+offset_right = 1164.0
+offset_bottom = 92.0
+theme_override_font_sizes/font_size = 38
+text = "第一镜 · 无色"
+
+[node name="Objective" type="Label" parent="HUD" unique_id=1996720971]
+offset_left = 64.0
+offset_top = 94.0
+offset_right = 1264.0
+offset_bottom = 130.0
+theme_override_font_sizes/font_size = 22
+text = "在倒影里找到桥。"
+
+[node name="Story" type="Label" parent="HUD" unique_id=848207951]
+offset_left = 64.0
+offset_top = 134.0
+offset_right = 1264.0
+offset_bottom = 204.0
+theme_override_font_sizes/font_size = 18
+autowrap_mode = 2
+
+[node name="Controls" type="Label" parent="HUD" unique_id=1548249495]
+modulate = Color(0.62352943, 0.6901961, 0.78431374, 1)
+offset_left = 64.0
+offset_top = 1004.0
+offset_right = 1564.0
+offset_bottom = 1034.0
+theme_override_font_sizes/font_size = 17
+text = "A / D  移动      W / ↑  跳跃      S / ↓  蹲下      M  翻转镜面"
+
+[node name="Colors" type="Label" parent="HUD" unique_id=174949386]
+offset_left = 1500.0
+offset_top = 34.0
+offset_right = 1860.0
+offset_bottom = 64.0
+theme_override_font_sizes/font_size = 20
+text = "RGB  0 / 3"
+horizontal_alignment = 2
+
+[node name="Status" type="Label" parent="HUD" unique_id=458945083]
+offset_left = 1580.0
+offset_top = 76.0
+offset_right = 1860.0
+offset_bottom = 106.0
+theme_override_font_sizes/font_size = 18
+text = "镜像：关"
+horizontal_alignment = 2
+
+[node name="Toast" type="Label" parent="HUD" unique_id=759653722]
+visible = false
+modulate = Color(0.8117647, 0.8901961, 1, 1)
+offset_left = 760.0
+offset_top = 300.0
+offset_right = 1160.0
+offset_bottom = 340.0
+theme_override_font_sizes/font_size = 22
+text = "存档点已点亮"
+horizontal_alignment = 1
+
+[node name="PrismLayer" type="CanvasLayer" parent="." unique_id=381815336]
+layer = 300
+
+[node name="PrismOverlay" type="Control" parent="PrismLayer" unique_id=1484005027]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("6_i6m2i")
+
+[node name="Dim" type="ColorRect" parent="PrismLayer/PrismOverlay" unique_id=1287925696]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+color = Color(0.019607844, 0.02745098, 0.047058824, 0.93333334)
+
+[node name="Art" type="Control" parent="PrismLayer/PrismOverlay" unique_id=99201776]
+anchors_preset = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+script = ExtResource("7_td3fc")
+
+[node name="Title" type="Label" parent="PrismLayer/PrismOverlay" unique_id=1312720312]
+layout_mode = 0
+offset_left = 660.0
+offset_top = 80.0
+offset_right = 1260.0
+offset_bottom = 160.0
+theme_override_font_sizes/font_size = 54
+text = "拾起一片色彩"
+horizontal_alignment = 1
+
+[node name="Story" type="Label" parent="PrismLayer/PrismOverlay" unique_id=1688196692]
+layout_mode = 0
+offset_left = 360.0
+offset_top = 750.0
+offset_right = 1560.0
+offset_bottom = 850.0
+theme_override_font_sizes/font_size = 24
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="Progress" type="Label" parent="PrismLayer/PrismOverlay" unique_id=1919474494]
+layout_mode = 0
+offset_left = 760.0
+offset_top = 852.0
+offset_right = 1160.0
+offset_bottom = 892.0
+theme_override_font_sizes/font_size = 22
+text = "RGB  0 / 3"
+horizontal_alignment = 1
+
+[node name="Hint" type="Label" parent="PrismLayer/PrismOverlay" unique_id=162003502]
+modulate = Color(0.54901963, 0.6156863, 0.72156864, 1)
+layout_mode = 0
+offset_left = 610.0
+offset_top = 896.0
+offset_right = 1310.0
+offset_bottom = 926.0
+theme_override_font_sizes/font_size = 16
+text = "按下继续，走进下一重镜面。"
+horizontal_alignment = 1
+
+[node name="Continue" type="Button" parent="PrismLayer/PrismOverlay" unique_id=496708679]
+layout_mode = 0
+offset_left = 830.0
+offset_top = 946.0
+offset_right = 1090.0
+offset_bottom = 1010.0
+theme_override_font_sizes/font_size = 24
+text = "继续"
