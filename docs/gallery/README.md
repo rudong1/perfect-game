@@ -1,0 +1,15 @@
+# 女主与 darksky · 结局插画
+
+独立插画预览，沿用女主与复活后 darksky 的角色造型。
+
+相拥额吻
+
+![相拥额吻](forehead-kiss.png)
+
+庭院里的脸颊吻
+
+![庭院里的脸颊吻](courtyard-kiss.png)
+
+月光下额头相抵
+
+![月光下额头相抵](moonlit-embrace.png)
