@@ -3,6 +3,17 @@
 [ext_resource type="Script" path="res://scripts/ending_screen.gd" id="1_pyjtg"]
 
 [ext_resource type="Script" path="res://scripts/color_progress.gd" id="progress"]
+[ext_resource type="Texture2D" path="res://assets/backgrounds/ending_together.png" id="together"]
+
+[sub_resource type="Gradient" id="EndingGradient"]
+offsets = PackedFloat32Array(0, 0.34, 0.62, 1)
+colors = PackedColorArray(0.02, 0.02, 0.02, 0.85, 0.02, 0.02, 0.02, 0.70, 0.02, 0.02, 0.02, 0.08, 0.02, 0.02, 0.02, 0)
+
+[sub_resource type="GradientTexture2D" id="EndingShade"]
+gradient = SubResource("EndingGradient")
+width = 1920
+height = 8
+fill_to = Vector2(1, 0)
 
 [node name="EndingScreen" type="Control" unique_id=1552134924]
 layout_mode = 3
@@ -11,12 +22,21 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 script = ExtResource("1_pyjtg")
 
-[node name="Backdrop" type="ColorRect" parent="." unique_id=200704935]
+[node name="Backdrop" type="TextureRect" parent="." unique_id=200704935]
 layout_mode = 0
 anchor_right = 1.0
 anchor_bottom = 1.0
 mouse_filter = 2
+texture = ExtResource("together")
+expand_mode = 1
+stretch_mode = 6
 
+[node name="ReadabilityShade" type="TextureRect" parent="."]
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+texture = SubResource("EndingShade")
+expand_mode = 1
 
 [node name="Title" type="Label" parent="." unique_id=289117379]
 modulate = Color(0.96862745, 0.9843137, 1, 1)
@@ -26,7 +46,7 @@ offset_top = 110.0
 offset_right = 1220.0
 offset_bottom = 330.0
 theme_override_font_sizes/font_size = 92
-text = "镜碎之后"
+text = "余色成光"
 
 [node name="Subtitle" type="Label" parent="." unique_id=881712363]
 modulate = Color(0.8392157, 0.8980392, 0.9490196, 1)
@@ -36,14 +56,14 @@ offset_top = 345.0
 offset_right = 930.0
 offset_bottom = 395.0
 theme_override_font_sizes/font_size = 32
-text = "全部色彩已收集"
+text = "这一次，两个人一起离开"
 
 [node name="Story" type="Label" parent="." unique_id=76223608]
 modulate = Color(0.78039217, 0.83137256, 0.90588236, 1)
 layout_mode = 0
 offset_left = 130.0
 offset_top = 430.0
-offset_right = 930.0
+offset_right = 850.0
 offset_bottom = 660.0
 theme_override_font_sizes/font_size = 26
 autowrap_mode = 2

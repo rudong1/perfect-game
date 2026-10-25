@@ -1,5 +1,6 @@
 shader_type canvas_item;
 render_mode unshaded;
+#include "res://shaders/rgb_palette.gdshaderinc"
 
 uniform vec4 top_color : source_color = vec4(0.027, 0.031, 0.039, 1.0);
 uniform vec4 bottom_color : source_color = vec4(0.082, 0.090, 0.110, 1.0);
@@ -13,6 +14,7 @@ uniform float fog_amount : hint_range(0.0, 1.0) = 0.0;
 uniform bool moss_enabled = false;
 uniform sampler2D scene_texture : source_color, filter_linear;
 uniform bool use_scene_texture = false;
+uniform bool monochrome_world = false;
 
 float hash(vec2 p) {
 	return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
@@ -117,6 +119,10 @@ void fragment() {
 		col += light_color.rgb * (1.0 - smoothstep(0.0, 0.18, ly)) * 0.012;
 		col = mix(col, light_color.rgb * 0.28, smoothstep(0.70, 1.0, ly) * fog_amount * 0.08);
 		col *= 1.0 - dot(centered, centered) * 0.18;
+	}
+	col = without_amber(col);
+	if (monochrome_world) {
+		col = vec3(dot(col, vec3(0.299, 0.587, 0.114)));
 	}
 	COLOR = vec4(col, 1.0);
 }

@@ -38,4 +38,4 @@ func _set_active() -> void:
 	if _active:
 		return
 	_active = true
-	modulate = Color(1.15, 1.2, 1.25, 1.0)
+	modulate = Color(1.2, 1.2, 1.2, 1.0)

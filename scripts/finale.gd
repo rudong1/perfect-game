@@ -1,6 +1,6 @@
 extends Node2D
-## The reflection leaves the opposite side. Escape, break the mirror, say goodbye.
-enum Phase { THRESHOLD, CROSSOVER, BETRAYAL, CHASE, SHATTER, FAREWELL, DEPARTURE }
+## Fear leads to a chase; freely giving the three colours restores a life.
+enum Phase { THRESHOLD, CROSSOVER, BETRAYAL, CHASE, SHATTER, CONFESSION, FUSION, REUNION, DEPARTURE }
 const HERO = preload("res://scenes/player/player.tscn")
 const FRAMES = preload("res://assets/characters/hero/hero_frames.tres")
 const GIANT_MIRROR = preload("res://scripts/final_mirror.gd")
@@ -10,17 +10,23 @@ const MIRROR_X := 3120.0
 const PURSUIT_SPEED := 205.0
 const PLAYER_START := Vector2(350, 900)
 const SHADOW_START := Vector2(130, 900)
-const FAREWELL_BEATS := [
-	{"speaker": "hero", "text": "「刚才……你是真的想把我的颜色夺走吗？」"},
-	{"speaker": "reflection", "text": "「是。门亮起来的时候，我以为终于轮到我了。\n可光穿过我的手，我忽然什么都听不见，只剩下害怕。」"},
-	{"speaker": "hero", "text": "「我也害怕。可我一直以为，\n身后那个晚半步的脚步声，是在陪着我。」"},
-	{"speaker": "reflection", "text": "「那是真的。第一次等到你，第一次有人回头找我……\n那些时候，我真的想和你一起出去。」"},
-	{"speaker": "reflection", "text": "「后来，我只顾着不想再被留下，\n竟然想把你也留在这里。……对不起。」"},
-	{"speaker": "hero", "text": "「我现在还没办法说没关系。\n但一起走过的那些路，我也不会当作没有发生。」"},
-	{"speaker": "reflection", "text": "「嗯。把颜色带走吧。\n别为了等我，错过外面的天亮。」", "opacity": 0.32},
-	{"speaker": "hero", "text": "你再次抬起手，贴向那片尚未落下的镜面。\n「那至少告诉我……你的名字。」", "gesture": true, "opacity": 0.24},
-	{"speaker": "reflection", "text": "也许，这也算是不错的告别吧。", "gesture": true, "opacity": 0.16},
-	{"speaker": "reflection", "text": "……对了，我叫 darksky。", "gesture": true, "opacity": 0.0},
+const REVIVAL_CG = preload("res://assets/backgrounds/ending_revival.png")
+const FUSION_DURATION := 4.2
+const CONFESSION_BEATS := [
+	{"speaker": "镜背的刻痕", "text": "碎裂的镜框背后，露出一行旧字：\n「夺来的色彩只能造出倒影，赠予的色彩才能唤回生命。」"},
+	{"speaker": "reflection", "text": "「我也曾和你一样，是个掉进来的女孩。\n可我始终解不开出口，等到最后，连自己的身体都褪去了。」"},
+	{"speaker": "reflection", "text": "「你会回头找我，会等我跟上……\n我真的想和你一起走。可看见门只回应你，我又只剩下害怕。」"},
+	{"speaker": "reflection", "text": "「我把陪伴变成了追赶，竟然想夺走属于你的东西。\n……对不起。我不该让你也尝到被留下的滋味。」"},
+	{"speaker": "hero", "text": "「我还在生气。\n可我不愿用你的消失，换我一个人的离开。」"},
+	{"speaker": "hero", "text": "你看向掌心的红、蓝、绿，再看向镜背的旧字。\n「如果不能夺走，那就由我亲手给你。」"},
+	{"speaker": "reflection", "text": "「可那是你一路找回的颜色。给了我，\n它们就不会再属于你了……你真的愿意？」"},
+	{"speaker": "hero", "text": "「这些颜色，是我们一起找回来的。\n这一次，换我把你带回来。」", "gesture": true},
+]
+const REUNION_BEATS := [
+	{"speaker": "两个人的脚步", "text": "三色从你的掌心离开，在她心口汇成完整的光。\n指尖有了温度，石地上，终于落下第二道真实的影子。"},
+	{"speaker": "reflection", "text": "「原来……被人握住手，是这样的感觉。\n我以为自己早就忘记了。」"},
+	{"speaker": "hero", "text": "「这一次，不用谁等在镜子里了。\n我们一起走。还有……我还不知道你的名字。」"},
+	{"speaker": "reflection", "text": "……对了，我叫 darksky。"},
 ]
 const REVELATION_BEATS := [
 	{"speaker": "门前", "text": "镜门终于回应了{name}。\n她也伸出手，光却穿过了她的掌心。"},
@@ -40,7 +46,8 @@ var backdrop: Node2D
 var _scene_time := 0.0
 var _passage_shown := false
 var _veil: ColorRect
-var farewell_index := 0
+var confession_index := 0
+var reunion_index := 0
 var _state: Node
 var _clock := 0.0
 var _pursuit_speed := PURSUIT_SPEED
@@ -50,11 +57,13 @@ var _dialogue: Panel
 var _caption: Label
 var _speaker: Label
 var _objective: Label
+var _chapter: Label
 var _next: Button
 var _flash: ColorRect
 var _memory: AnimatedSprite2D
 var _memory_glass: Polygon2D
 var _memory_tween: Tween
+var _cg: TextureRect
 
 func _ready() -> void:
 	_state = get_node("/root/GameState")
@@ -65,6 +74,15 @@ func _ready() -> void:
 	_build_world()
 	_build_actors()
 	_build_ui()
+	if _state.has_offered_colors():
+		player.position = Vector2(MIRROR_X - mirror_body.impact_distance + 2, 900)
+		mirror_body.shatter()
+		shadow.visible = false
+		if _state.darksky_revived:
+			_show_reunion()
+		else:
+			_begin_fusion()
+		return
 	shadow.position = Vector2(PLAYER_START.x - 90, 180)
 	shadow.scale.y = -1
 	_show_revelation()
@@ -162,6 +180,20 @@ func _label(parent: Node, point: Vector2, size: Vector2, text: String, font_size
 	return label
 
 func _build_ui() -> void:
+	var art_layer := CanvasLayer.new()
+	art_layer.layer = 115
+	add_child(art_layer)
+	_cg = TextureRect.new()
+	_cg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_cg.texture = REVIVAL_CG
+	_cg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_cg.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	_cg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_cg.modulate.a = 0
+	var palette := ShaderMaterial.new()
+	palette.shader = preload("res://shaders/restricted_art.gdshader")
+	_cg.material = palette
+	art_layer.add_child(_cg)
 	var layer := CanvasLayer.new()
 	layer.layer = 120
 	add_child(layer)
@@ -174,7 +206,7 @@ func _build_ui() -> void:
 	progress.position = Vector2(48, 26)
 	progress.set_script(preload("res://scripts/color_progress.gd"))
 	layer.add_child(progress)
-	_label(layer, Vector2(380, 24), Vector2(1400, 50), "终幕 · 倒影越界", 34)
+	_chapter = _label(layer, Vector2(380, 24), Vector2(1400, 50), "终幕 · 倒影越界", 34)
 	_objective = _label(layer, Vector2(70, 96), Vector2(1770, 45), "", 23)
 	_dialogue = Panel.new()
 	_dialogue.position = Vector2(320, 190)
@@ -235,7 +267,15 @@ func _physics_process(delta: float) -> void:
 			_flash.color.a = maxf(0, 0.55 - _clock * 2.4)
 			camera.offset = Vector2(sin(_clock * 90) * 9, cos(_clock * 74) * 5) * maxf(0, 1 - _clock * 3)
 			if _clock > 1.0:
-				_show_farewell()
+				_show_confession()
+		Phase.FUSION:
+			var t := clampf(_clock / FUSION_DURATION, 0, 1)
+			backdrop.set_desaturation(t)
+			_memory_glass.modulate.a = lerpf(0.4, 1.0, t)
+			_cg.modulate.a = smoothstep(0.62, 1.0, t)
+			if _clock >= FUSION_DURATION:
+				_state.revive_darksky()
+				_show_reunion()
 	var focus := clampf(player.position.x, 960, CORRIDOR_WIDTH - 960)
 	if phase == Phase.THRESHOLD and revelation_index in [1, 2]:
 		focus = CORRIDOR_WIDTH - 960
@@ -280,8 +320,15 @@ func _advance_dialogue() -> void:
 			_speaker.text = "镜面泛起最后一次涟漪"
 			_caption.text = "她松开了镜中的门环，向你走来。\n那条始终隔在你们之间的边界，正在消失。"
 			_objective.text = "那个一直与你同行的倒影，走出了镜面。"
-	elif phase == Phase.FAREWELL:
-		_advance_farewell()
+	elif phase == Phase.CONFESSION:
+		_advance_confession()
+	elif phase == Phase.REUNION and _clock >= 0.35:
+		_clock = 0
+		if reunion_index + 1 < REUNION_BEATS.size():
+			reunion_index += 1
+			_show_reunion_beat()
+		else:
+			_leave_mirror()
 
 func _start_chase() -> void:
 	phase = Phase.CHASE
@@ -313,7 +360,7 @@ func _retry() -> void:
 	_objective.text = "按 D / → 向右重试，Shift 冲刺。已经找到的颜色会保留。"
 
 func _break_mirror() -> void:
-	if phase in [Phase.SHATTER, Phase.FAREWELL, Phase.DEPARTURE]:
+	if phase in [Phase.SHATTER, Phase.CONFESSION, Phase.FUSION, Phase.REUNION, Phase.DEPARTURE]:
 		return
 	phase = Phase.SHATTER
 	_clock = 0
@@ -324,60 +371,121 @@ func _break_mirror() -> void:
 	_dialogue.visible = false
 	_objective.text = "巨镜碎裂。追赶你的脚步停了，碎片里却还留着她的轮廓。"
 
-func _show_farewell() -> void:
-	phase = Phase.FAREWELL
+func _show_confession() -> void:
+	phase = Phase.CONFESSION
+	_chapter.text = "终幕 · 镜背之言"
 	camera.offset = Vector2.ZERO
 	shadow.visible = false
 	player._play("idle")
 	_dialogue.visible = true
-	farewell_index = 0
+	confession_index = 0
 	_next.visible = true
 	_clock = 0
 	_memory_glass.visible = true
 	_memory_glass.modulate.a = 0.5
 	_memory.modulate.a = 1.0
-	_show_farewell_beat()
-	_objective.text = "最后一片镜子映着她。你们之间，再也没有追赶的脚步声。"
+	_show_confession_beat()
+	_objective.text = "镜背的旧字，藏着另一种把她带回来的办法。"
 
-func _show_farewell_beat() -> void:
-	var beat: Dictionary = FAREWELL_BEATS[farewell_index]
-	_speaker.text = _state.player_name if beat.speaker == "hero" else "最后一片镜中的女孩"
+func _show_confession_beat() -> void:
+	var beat: Dictionary = CONFESSION_BEATS[confession_index]
+	_speaker.text = _state.player_name if beat.speaker == "hero" else ("最后一片镜中的女孩" if beat.speaker == "reflection" else beat.speaker)
 	_caption.text = beat.text
-	_next.text = "走向天亮" if farewell_index == FAREWELL_BEATS.size() - 1 else "继续"
+	_next.text = "将三色交给她" if confession_index == CONFESSION_BEATS.size() - 1 else "继续"
 	if beat.get("gesture", false):
 		player._play("reach")
 		HeroAnimation.play(_memory, "reach")
-	if beat.has("opacity"):
 		if _memory_tween != null and _memory_tween.is_running():
 			_memory_tween.kill()
 		_memory_tween = create_tween().set_parallel(true)
-		_memory_tween.tween_property(_memory_glass, "modulate:a", beat.opacity, 1.1)
-		if beat.get("gesture", false):
-			_memory_tween.tween_property(_memory_glass, "position:x", player.position.x + 84, 0.7)
-	if farewell_index == FAREWELL_BEATS.size() - 1:
-		_speaker.text = "消散前，她把名字留给了你"
+		_memory_tween.tween_property(_memory_glass, "position:x", player.position.x + 84, 0.7)
 
-func _advance_farewell() -> void:
-	if phase != Phase.FAREWELL or _clock < 0.35:
+func _advance_confession() -> void:
+	if phase != Phase.CONFESSION or _clock < 0.35:
 		return
 	_clock = 0
-	if farewell_index + 1 < FAREWELL_BEATS.size():
-		farewell_index += 1
-		_show_farewell_beat()
+	if confession_index + 1 < CONFESSION_BEATS.size():
+		confession_index += 1
+		_show_confession_beat()
 	else:
-		_leave_mirror()
+		_begin_fusion()
+
+func _cg_dialogue_layout() -> void:
+	_dialogue.position = Vector2(60, 185)
+	_dialogue.size = Vector2(760, 360)
+	_speaker.size = Vector2(690, 35)
+	_caption.size = Vector2(690, 230)
+	_caption.add_theme_font_size_override("font_size", 26)
+	_next.position = Vector2(490, 300)
+	_next.size = Vector2(230, 42)
+
+func _begin_fusion() -> void:
+	if not _state.has_offered_colors() and not _state.offer_colors():
+		_objective.text = "三种色彩尚未找齐。她的生命需要完整的红、蓝、绿。"
+		return
+	phase = Phase.FUSION
+	_chapter.text = "终幕 · 赠予的色彩"
+	_clock = 0
+	if _memory_tween != null and _memory_tween.is_running():
+		_memory_tween.kill()
+	shadow.visible = false
+	_memory_glass.visible = true
+	_memory_glass.position.x = player.position.x + 84
+	player._play("reach")
+	HeroAnimation.play(_memory, "reach")
+	_next.visible = false
+	_dialogue.visible = true
+	_cg_dialogue_layout()
+	_speaker.text = _state.player_name
+	_caption.text = "红、蓝、绿离开了你的掌心。\n你放开它们，也握住了镜中的那只手。"
+	_objective.text = "色彩已赠予。三束光正汇成她的生命。"
+
+func _show_reunion() -> void:
+	phase = Phase.REUNION
+	_chapter.text = "终幕 · 余色成光"
+	_clock = 0
+	reunion_index = 0
+	shadow.visible = false
+	_memory_glass.visible = true
+	_memory_glass.modulate = Color.WHITE
+	_memory_glass.color.a = 0
+	_memory_glass.get_child(0).visible = false
+	_memory_glass.position.x = player.position.x + 84
+	_memory.material = null
+	_memory.modulate = Color.WHITE
+	_memory.flip_h = true
+	HeroAnimation.play(_memory, "idle")
+	player._play("idle")
+	backdrop.set_desaturation(1)
+	_cg.modulate.a = 1
+	_cg_dialogue_layout()
+	_dialogue.visible = true
+	_next.visible = true
+	_objective.text = "色彩不再属于你，却让她真正回到了你的身边。"
+	_show_reunion_beat()
+
+func _show_reunion_beat() -> void:
+	var beat: Dictionary = REUNION_BEATS[reunion_index]
+	_speaker.text = _state.player_name if beat.speaker == "hero" else ("重获身体的女孩" if beat.speaker == "reflection" else beat.speaker)
+	_caption.text = beat.text
+	_next.text = "一起走出镜面" if reunion_index == REUNION_BEATS.size() - 1 else "继续"
 
 func _leave_mirror() -> void:
 	phase = Phase.DEPARTURE
 	_next.disabled = true
 	_dialogue.visible = false
-	_objective.text = "你带着颜色，也带着那个名字，走向天亮。"
+	_objective.text = "你不再拥有那些颜色，却终于能够和她一起离开。"
 	player.facing = 1
 	player.sprite.flip_h = false
 	player._play("run")
 	player.sprite.speed_scale = HeroAnimation.cadence("run", 80)
+	_memory.flip_h = false
+	HeroAnimation.play(_memory, "run")
+	_memory.speed_scale = HeroAnimation.cadence("run", 80)
 	var departure := create_tween().set_parallel(true)
 	departure.tween_property(player, "position:x", player.position.x + 100, 1.25)
+	departure.tween_property(_memory_glass, "position:x", _memory_glass.position.x + 100, 1.25)
+	departure.tween_property(_cg, "modulate:a", 0.0, 0.35)
 	departure.tween_property(_veil, "color:a", 1.0, 0.85).set_delay(0.4)
 	await departure.finished
 	_state.complete_journey()
@@ -389,10 +497,10 @@ func _unhandled_input(event: InputEvent) -> void:
 	if OS.is_debug_build() and event.is_action_pressed("developer_skip"):
 		_break_mirror()
 		get_viewport().set_input_as_handled()
-	elif event.is_action_pressed("restart_room") and phase not in [Phase.FAREWELL, Phase.DEPARTURE]:
+	elif event.is_action_pressed("restart_room") and phase not in [Phase.CONFESSION, Phase.FUSION, Phase.REUNION, Phase.DEPARTURE]:
 		_retry()
 		get_viewport().set_input_as_handled()
-	elif event.is_action_pressed("ui_accept") and phase in [Phase.THRESHOLD, Phase.FAREWELL]:
+	elif event.is_action_pressed("ui_accept") and phase in [Phase.THRESHOLD, Phase.CONFESSION, Phase.REUNION]:
 		_advance_dialogue()
 		get_viewport().set_input_as_handled()
 
@@ -400,6 +508,24 @@ func _draw() -> void:
 	if not is_instance_valid(player):
 		return
 	var colors := [Color("#FF637E"), Color("#59CFFF"), Color("#73E2A5")]
+	if phase == Phase.FUSION:
+		var t := clampf(_clock / FUSION_DURATION, 0, 1)
+		var destination := _memory_glass.position + Vector2(0, -125)
+		for i in 3:
+			var start := player.position + Vector2(-37 + i * 37, -210)
+			var bend := (start + destination) * 0.5 + Vector2(-50 + i * 50, -120)
+			var curve := PackedVector2Array()
+			for sample in 17:
+				var progress := maxf(0, t - 0.28) + (t - maxf(0, t - 0.28)) * sample / 16.0
+				curve.append(start.lerp(bend, progress).lerp(bend.lerp(destination, progress), progress))
+			draw_polyline(curve, colors[i], 3, true)
+			draw_circle(curve[-1], 6, colors[i])
+		draw_circle(destination, 5 + t * 17, Color(1, 1, 1, t * 0.32))
+		return
+	if _state.darksky_revived:
+		draw_set_transform(_memory_glass.position + Vector2(0, -2), 0, Vector2(1, 0.15))
+		draw_circle(Vector2.ZERO, 31, Color(0, 0, 0, 0.35))
+		draw_set_transform(Vector2.ZERO)
 	for i in 3:
 		if not _state.has_color(i):
 			continue

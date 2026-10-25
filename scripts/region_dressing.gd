@@ -8,7 +8,7 @@ var _time := 0.0
 func _ready() -> void:
 	add_to_group("gothic_visuals")
 	add_to_group("region_dressing")
-	set_meta("draw_calls", [8, 26, 17, 21][clampi(region, 0, 3)])
+	set_meta("draw_calls", [8, 10, 17, 21][clampi(region, 0, 3)])
 	set_meta("bounds", Rect2(0, 180, 1920, 720))
 	if region == 2:
 		var mist := ColorRect.new()
@@ -44,16 +44,9 @@ func _rose_drapes() -> void:
 		var cloth := PackedVector2Array([Vector2(x, 185), Vector2(x + 125, 185), Vector2(x + 108, 390), Vector2(x + 64, 440), Vector2(x + 17, 404)])
 		draw_colored_polygon(cloth, Color("#2F111A"))
 		draw_polyline(cloth, Color("#8D5962", 0.65), 2, true)
-		draw_line(Vector2(x + 16, 185), Vector2(x + 108, 185), Color("#C9A227"), 3)
+		draw_line(Vector2(x + 16, 185), Vector2(x + 108, 185), Color("#B6B6B6"), 3)
 		draw_line(Vector2(x + 34, 188), Vector2(x + 46, 408), Color("#81515E", 0.28), 2)
 		draw_line(Vector2(x + 90, 188), Vector2(x + 81, 416), Color("#81515E", 0.20), 3)
-	for x in [350.0, 1550.0]:
-		draw_line(Vector2(x, 900), Vector2(x, 724), Color("#625434"), 4)
-		draw_line(Vector2(x - 30, 762), Vector2(x + 30, 762), Color("#625434"), 3)
-		for j in [-1, 0, 1]:
-			var flame := Vector2(x + j * 30, 718 + abs(j) * 24)
-			draw_line(flame + Vector2(0, 8), Vector2(flame.x, 765), Color("#BEB39B"), 4)
-			draw_circle(flame, 3, Color("#E8D8AB"))
 
 func _rain_and_puddles() -> void:
 	for i in 12:

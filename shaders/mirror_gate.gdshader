@@ -1,4 +1,5 @@
 shader_type canvas_item;
+#include "res://shaders/rgb_palette.gdshaderinc"
 
 // The painted reflection is already in the illustration. Only its glass
 // shimmers; flipping the source would replace the girl with another image.
@@ -33,5 +34,5 @@ void fragment() {
 	vec2 local = (uv - gate_center) / gate_size + vec2(0.5);
 	float sheen = pow(max(0.0, 1.0 - abs(local.x - 0.5) * 2.0), 3.0);
 	col += glass_tint.rgb * sheen * 0.012 * ripple * (0.6 + 0.4 * sin(TIME * 1.3));
-	COLOR = vec4(col, edge_fade * glass_alpha);
+	COLOR = vec4(without_amber(col), edge_fade * glass_alpha);
 }

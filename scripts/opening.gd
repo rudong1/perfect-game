@@ -26,6 +26,9 @@ func _ready() -> void:
 	caption.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_gate_material = gate.material as ShaderMaterial
 	var photo := $Photo as Sprite2D
+	var palette := ShaderMaterial.new()
+	palette.shader = preload("res://shaders/restricted_art.gdshader")
+	photo.material = palette
 	var source_size := photo.texture.get_size()
 	var cover := maxf(1920.0 / source_size.x, 1080.0 / source_size.y)
 	photo.scale = Vector2.ONE * cover

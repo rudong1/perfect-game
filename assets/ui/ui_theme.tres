@@ -5,7 +5,7 @@ font_names = PackedStringArray("EB Garamond", "Noto Serif CJK SC", "Source Han S
 font_weight = 400
 
 [sub_resource type="GDScript" id="LeadPanelScript"]
-script/source = "extends StyleBox\n@export var surface := Color(0.043137, 0.047059, 0.062745, 0.88)\nfunc _get_minimum_size() -> Vector2:\n\treturn Vector2(24, 24)\nfunc _draw(item: RID, rect: Rect2) -> void:\n\tvar gold := Color(0.788235, 0.635294, 0.152941, 0.5)\n\tRenderingServer.canvas_item_add_rect(item, rect, surface)\n\tvar corners := [rect.position, Vector2(rect.end.x, rect.position.y), rect.end, Vector2(rect.position.x, rect.end.y)]\n\tfor i in 4:\n\t\tRenderingServer.canvas_item_add_line(item, corners[i], corners[(i + 1) % 4], gold, 1.0, true)\n\tfor corner in [rect.position + Vector2(7, 7), Vector2(rect.end.x - 7, rect.position.y + 7), rect.end - Vector2(7, 7), Vector2(rect.position.x + 7, rect.end.y - 7)]:\n\t\tRenderingServer.canvas_item_add_line(item, corner - Vector2(3, 0), corner + Vector2(3, 0), gold, 1.0, true)\n\t\tRenderingServer.canvas_item_add_line(item, corner - Vector2(0, 3), corner + Vector2(0, 3), gold, 1.0, true)\n"
+script/source = "extends StyleBox\n@export var surface := Color(0.043137, 0.047059, 0.062745, 0.88)\nfunc _get_minimum_size() -> Vector2:\n\treturn Vector2(24, 24)\nfunc _draw(item: RID, rect: Rect2) -> void:\n\tvar lead := Color(0.76, 0.76, 0.76, 0.5)\n\tRenderingServer.canvas_item_add_rect(item, rect, surface)\n\tvar corners := [rect.position, Vector2(rect.end.x, rect.position.y), rect.end, Vector2(rect.position.x, rect.end.y)]\n\tfor i in 4:\n\t\tRenderingServer.canvas_item_add_line(item, corners[i], corners[(i + 1) % 4], lead, 1.0, true)\n\tfor corner in [rect.position + Vector2(7, 7), Vector2(rect.end.x - 7, rect.position.y + 7), rect.end - Vector2(7, 7), Vector2(rect.position.x + 7, rect.end.y - 7)]:\n\t\tRenderingServer.canvas_item_add_line(item, corner - Vector2(3, 0), corner + Vector2(3, 0), lead, 1.0, true)\n\t\tRenderingServer.canvas_item_add_line(item, corner - Vector2(0, 3), corner + Vector2(0, 3), lead, 1.0, true)\n"
 
 [sub_resource type="StyleBox" id="LeadPanel"]
 content_margin_left = 18.0
@@ -17,19 +17,19 @@ script = SubResource("LeadPanelScript")
 [resource]
 default_font = SubResource("Serif")
 default_font_size = 20
-Label/colors/font_color = Color(0.909804, 0.890196, 0.827451, 1)
-Button/colors/font_color = Color(0.909804, 0.890196, 0.827451, 1)
-LineEdit/colors/font_color = Color(0.909804, 0.890196, 0.827451, 1)
-RichTextLabel/colors/font_color = Color(0.909804, 0.890196, 0.827451, 1)
-OptionButton/colors/font_color = Color(0.909804, 0.890196, 0.827451, 1)
-CheckBox/colors/font_color = Color(0.909804, 0.890196, 0.827451, 1)
-TooltipLabel/colors/font_color = Color(0.909804, 0.890196, 0.827451, 1)
-Button/colors/font_hover_color = Color(0.909804, 0.890196, 0.827451, 1)
-Button/colors/font_pressed_color = Color(0.909804, 0.890196, 0.827451, 1)
-Button/colors/font_focus_color = Color(0.909804, 0.890196, 0.827451, 1)
-Button/colors/font_disabled_color = Color(0.909804, 0.890196, 0.827451, 0.45)
-LineEdit/colors/caret_color = Color(0.788235, 0.635294, 0.152941, 1)
-LineEdit/colors/selection_color = Color(0.788235, 0.635294, 0.152941, 0.22)
+Label/colors/font_color = Color(0.9, 0.9, 0.9, 1)
+Button/colors/font_color = Color(0.9, 0.9, 0.9, 1)
+LineEdit/colors/font_color = Color(0.9, 0.9, 0.9, 1)
+RichTextLabel/colors/font_color = Color(0.9, 0.9, 0.9, 1)
+OptionButton/colors/font_color = Color(0.9, 0.9, 0.9, 1)
+CheckBox/colors/font_color = Color(0.9, 0.9, 0.9, 1)
+TooltipLabel/colors/font_color = Color(0.9, 0.9, 0.9, 1)
+Button/colors/font_hover_color = Color(0.9, 0.9, 0.9, 1)
+Button/colors/font_pressed_color = Color(0.9, 0.9, 0.9, 1)
+Button/colors/font_focus_color = Color(0.9, 0.9, 0.9, 1)
+Button/colors/font_disabled_color = Color(0.9, 0.9, 0.9, 0.45)
+LineEdit/colors/caret_color = Color(0.8, 0.8, 0.8, 1)
+LineEdit/colors/selection_color = Color(0.8, 0.8, 0.8, 0.22)
 Panel/styles/panel = SubResource("LeadPanel")
 PanelContainer/styles/panel = SubResource("LeadPanel")
 TooltipPanel/styles/panel = SubResource("LeadPanel")

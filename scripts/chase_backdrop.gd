@@ -8,6 +8,8 @@ var camera: Camera2D
 var corridor_width := 3600.0
 var far_strip: Node2D
 var near_strip: Node2D
+var _palettes: Array[ShaderMaterial] = []
+var _desaturation := 0.0
 
 func _ready() -> void:
 	z_index = -5
@@ -20,9 +22,13 @@ func _ready() -> void:
 func _strip(parent: Node, texture: Texture2D, tint: Color) -> Node2D:
 	var strip := Node2D.new()
 	parent.add_child(strip)
+	var palette := ShaderMaterial.new()
+	palette.shader = preload("res://shaders/restricted_art.gdshader")
+	_palettes.append(palette)
 	for i in 3:
 		var image := TextureRect.new()
 		image.texture = texture
+		image.material = palette
 		image.position = Vector2(i * 1920, 0)
 		image.size = Vector2(1920, 1080)
 		image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
@@ -33,16 +39,26 @@ func _strip(parent: Node, texture: Texture2D, tint: Color) -> Node2D:
 		strip.add_child(image)
 	return strip
 
+func set_desaturation(value: float) -> void:
+	_desaturation = clampf(value, 0, 1)
+	for palette in _palettes:
+		palette.set_shader_parameter("monochrome_amount", _desaturation)
+	queue_redraw()
+
+func _stone(color: Color) -> Color:
+	var gray := color.r * 0.299 + color.g * 0.587 + color.b * 0.114
+	return color.lerp(Color(gray, gray, gray), _desaturation)
+
 func _process(_delta: float) -> void:
 	var distance := maxf(0, camera.position.x - 960)
 	far_strip.position.x = -distance * FAR_SPEED
 	near_strip.position.x = -distance * NEAR_SPEED
 
 func _draw() -> void:
-	draw_rect(Rect2(0, 900, corridor_width, 180), Color("#293431"))
-	draw_rect(Rect2(0, 0, corridor_width, 180), Color("#1B2423"))
-	draw_rect(Rect2(0, 910, corridor_width, 12), Color("#364340"))
-	draw_line(Vector2(0, 900), Vector2(corridor_width, 900), Color("#A8B6B2"), 3)
+	draw_rect(Rect2(0, 900, corridor_width, 180), _stone(Color("#293431")))
+	draw_rect(Rect2(0, 0, corridor_width, 180), _stone(Color("#1B2423")))
+	draw_rect(Rect2(0, 910, corridor_width, 12), _stone(Color("#364340")))
+	draw_line(Vector2(0, 900), Vector2(corridor_width, 900), _stone(Color("#A8B6B2")), 3)
 	for i in 24:
 		var x := i * 160.0
 		draw_line(Vector2(x, 921), Vector2(x, 1080), Color(0.6, 0.7, 0.67, 0.12), 1)

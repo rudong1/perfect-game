@@ -56,6 +56,7 @@ func load_level() -> void:
 	_background.set_shader_parameter("fog_amount", data.get("fog", 0.0))
 	_background.set_shader_parameter("scene_texture", CHURCH_BACKGROUNDS[_state.current_level])
 	_background.set_shader_parameter("use_scene_texture", true)
+	_background.set_shader_parameter("monochrome_world", _state.current_level == 0)
 	$HUD/Chapter.text = data.title
 	$HUD/Chapter.modulate = data.accent
 	$HUD/Objective.text = data.objective

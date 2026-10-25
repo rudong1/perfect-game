@@ -16,6 +16,9 @@ var _age := 0.0
 var _passage_tween: Tween
 
 func _ready() -> void:
+	var palette := ShaderMaterial.new()
+	palette.shader = preload("res://shaders/restricted_art.gdshader")
+	material = palette
 	_source_rect = ART.region
 	var size := _source_rect.size * (ART_HEIGHT / _source_rect.size.y)
 	_art_rect = Rect2(Vector2(-size.x * 0.5, -size.y), size)
@@ -23,6 +26,7 @@ func _ready() -> void:
 	impact_distance = size.x * 0.5 + 20
 	_graphic = Sprite2D.new()
 	_graphic.texture = ART
+	_graphic.material = palette
 	_graphic.scale = Vector2.ONE * (ART_HEIGHT / _source_rect.size.y)
 	_graphic.position = Vector2(0, -ART_HEIGHT * 0.5)
 	add_child(_graphic)

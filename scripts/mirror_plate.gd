@@ -37,7 +37,7 @@ func _set_pressed(value: bool) -> void:
 	if value == is_activated:
 		return
 	is_activated = value
-	modulate = Color(0.7, 1.0, 1.0) if value else Color.WHITE
+	modulate = Color(1.2, 1.2, 1.2) if value else Color.WHITE
 	_on_mirror_changed(_mirror_state.mirrored)
 	pressure_changed.emit(value)
 	if value:

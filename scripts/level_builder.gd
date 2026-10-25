@@ -21,22 +21,38 @@ func build(index: int, parent: Node2D) -> Dictionary:
 	var steps: Array = []
 	match index:
 		0:
-			var lesson := _step(parent, [[730, true, false], [590, false, true]], 1020, true)
-			lesson.hint = "按 M 换面，向右走：你踩上方本体踏板，晚一步的影子踩下方踏板。"
+			var lesson := _step(parent, [[430, false, false], [570, true, true]], 720, false)
+			lesson.hint = "先越过两块踏板再折返，让晚半拍的她留在上方，你踩下方本体板。"
 			steps.append(lesson)
-			var return_step := _step(parent, [[1260, false, false], [1400, true, true]], 1580, false)
-			return_step.hint = "再按 M 回到地面。先越过远处踏板，再折返，让晚半拍的她停在另一块上。"
+			var ascent := _step(parent, [[980, true, false], [840, false, true]], 1190, true)
+			ascent.hint = "第一道门已开。按 M 换面，再向右，让本体与倒影接力压住第二组。"
+			steps.append(ascent)
+			var return_step := _step(parent, [[1420, false, false, 56], [1560, true, true, 56]], 1660, false)
+			return_step.hint = "回到地面，先走过窄踏板再折返。对齐时保持脚步，别急着停。"
 			steps.append(return_step)
 		1:
+			var release := _step(parent, [[430, true, false], [570, false, true]], 690, true)
+			release.hint = "先换面，越过双板再回头配合，解开通往立镜的栅门。"
+			steps.append(release)
 			var slab := _slab(parent)
-			var transit := _step(parent, [], 1650, false)
+			var transit := _step(parent, [], 1390, false)
 			transit.kind = "slab"
 			transit.slab = slab
 			transit.plates.append(_plate(parent, 1230, false, false, "接引踏板"))
 			transit.landing_x = 1230.0
-			transit.hint = "推镜入刻度，再退回门槛印记。按 E 后，要直接映到另一侧的接引踏板上。"
+			transit.calibration_x = 1080.0
+			transit.marker = _mirror_target(parent, 1080, 930, "第一道镜印")
+			transit.hint = "回到地面，推镜对准第一道刻度，再退回菱形印记，按 E 直接映上接引踏板。"
 			steps.append(transit)
-			_mirror_target(parent)
+			var return_transit := _step(parent, [], 1660, false)
+			return_transit.kind = "slab"
+			return_transit.slab = slab
+			return_transit.plates.append(_plate(parent, 810, false, false, "回映踏板"))
+			return_transit.landing_x = 810.0
+			return_transit.calibration_x = 940.0
+			return_transit.marker = _mirror_target(parent, 940, 1070, "第二道镜印")
+			return_transit.hint = "从右侧把镜子推回新刻度，再站上右侧菱形按 E，映回左侧踏板；解锁后再穿回右边。"
+			steps.append(return_transit)
 		2:
 			var slab := _slab(parent)
 			var light := _light_step(parent, slab, false)
@@ -59,13 +75,16 @@ func build(index: int, parent: Node2D) -> Dictionary:
 	puzzle.goal = goal
 	parent.add_child(puzzle)
 	if index == 0:
-		_checkpoint(parent, 1120)
+		_checkpoint(parent, 1240)
+	elif index == 1:
+		_checkpoint(parent, 740)
+		_checkpoint(parent, 1300)
 	return {"spawn": Vector2(180, 900), "goal": goal, "width": WORLD_WIDTH}
 
 func _step(parent: Node2D, specifications: Array, door_x: float, mirrored: bool) -> Dictionary:
 	var plates: Array[Area2D] = []
 	for specification in specifications:
-		plates.append(_plate(parent, float(specification[0]), bool(specification[1]), bool(specification[2])))
+		plates.append(_plate(parent, float(specification[0]), bool(specification[1]), bool(specification[2]), "", float(specification[3]) if specification.size() > 3 else 76.0))
 	var door := StaticBody2D.new()
 	door.name = "Door%d" % int(door_x)
 	door.position = Vector2(door_x, 180)
@@ -81,7 +100,7 @@ func _step(parent: Node2D, specifications: Array, door_x: float, mirrored: bool)
 	parent.add_child(door)
 	return {"kind": "plate", "plates": plates, "door": door, "mirrored": mirrored, "hint": "先越过踏板，再回头，给影子留出半拍。"}
 
-func _plate(parent: Node2D, x: float, ceiling: bool, shadow: bool, caption: String = "") -> Area2D:
+func _plate(parent: Node2D, x: float, ceiling: bool, shadow: bool, caption: String = "", width: float = 76.0) -> Area2D:
 	var area := Area2D.new()
 	area.name = ("ShadowPlate" if shadow else "PlayerPlate") + str(int(x))
 	area.position = Vector2(x, 192 if ceiling else 888)
@@ -90,7 +109,7 @@ func _plate(parent: Node2D, x: float, ceiling: bool, shadow: bool, caption: Stri
 	area.player_group = "mirror_self" if shadow else "player"
 	var collision := CollisionShape2D.new()
 	var shape := RectangleShape2D.new()
-	shape.size = Vector2(76, 24)
+	shape.size = Vector2(width, 24)
 	collision.shape = shape
 	area.add_child(collision)
 	var tint := Color("#bfbfbf") if shadow else Color("#efefef")
@@ -190,24 +209,24 @@ func _light_step(parent: Node2D, slab: StaticBody2D, transit: bool) -> Dictionar
 		step.hint = "双板已解开；推动立镜、按 E 穿镜，再用 M 调整三面反射镜，让三色同时抵达。"
 	return step
 
-func _mirror_target(parent: Node2D) -> void:
-	_paint(parent, func() -> void:
-		var canvas: Node2D = get_meta("gothic_draw_target")
-		canvas.draw_line(Vector2(1040, 897), Vector2(1120, 897), Color("#C9A227"), 5)
-		for x in [1040.0, 1120.0]:
-			canvas.draw_line(Vector2(x, 881), Vector2(x, 900), Color("#C9A227"), 2)
-		canvas.draw_line(Vector2(1080, 884), Vector2(1080, 900), Color("#D7C691"), 2)
-	, Rect2(1038, 879, 84, 23), 4)
+func _mirror_target(parent: Node2D, axis: float, entry: float, caption: String) -> Node2D:
 	var marker := Node2D.new()
-	marker.position = Vector2(1080, 900)
+	marker.name = "MirrorMark%d" % int(axis)
 	parent.add_child(marker)
-	_hint(marker, "将镜面推入刻度", Vector2(0, 60), Color("#D7C691"))
-	_paint(parent, func() -> void:
+	_paint(marker, func() -> void:
 		var canvas: Node2D = get_meta("gothic_draw_target")
-		var points := PackedVector2Array([Vector2(930, 879), Vector2(944, 890), Vector2(930, 900), Vector2(916, 890), Vector2(930, 879)])
-		canvas.draw_polyline(points, Color("#D7C691"), 2, true)
-		canvas.draw_line(Vector2(902, 899), Vector2(958, 899), Color("#D7C691"), 3)
-	, Rect2(900, 877, 60, 25), 2)
+		canvas.draw_line(Vector2(axis - 18, 897), Vector2(axis + 18, 897), Color("#D4D4D4"), 5)
+		for x in [axis - 18, axis, axis + 18]:
+			canvas.draw_line(Vector2(x, 882), Vector2(x, 900), Color("#D4D4D4"), 2)
+	, Rect2(axis - 20, 880, 40, 23), 4)
+	_hint(marker, caption + " · 对齐镜面", Vector2(axis, 960), Color("#D4D4D4"))
+	_paint(marker, func() -> void:
+		var canvas: Node2D = get_meta("gothic_draw_target")
+		var points := PackedVector2Array([Vector2(entry, 879), Vector2(entry + 14, 890), Vector2(entry, 900), Vector2(entry - 14, 890), Vector2(entry, 879)])
+		canvas.draw_polyline(points, Color("#D4D4D4"), 2, true)
+		canvas.draw_line(Vector2(entry - 28, 899), Vector2(entry + 28, 899), Color("#D4D4D4"), 3)
+	, Rect2(entry - 30, 877, 60, 25), 2)
+	return marker
 
 func _paint(parent: Node2D, painter: Callable, bounds: Rect2, calls: int) -> Node2D:
 	var visual := Node2D.new()
@@ -309,7 +328,6 @@ func _flying_buttress(point: Vector2, direction: float) -> void:
 func _decor(parent: Node2D) -> void:
 	# The detailed cathedral is now a background plate, without baked actors,
 	# gates, checkpoints or platforms. Only actual game nodes draw those.
-	_candle_layer(parent)
 	var dressing := Node2D.new()
 	dressing.name = "RegionDressing"
 	dressing.set_script(REGION_DRESSING)
@@ -339,8 +357,8 @@ func _checkpoint_visual(owner: Node2D) -> void:
 	_paint(owner, func() -> void:
 		var canvas: Node2D = get_meta("gothic_draw_target")
 		var glyph := PackedVector2Array([Vector2(0, -55), Vector2(10, -40), Vector2(0, -25), Vector2(-10, -40), Vector2(0, -55)])
-		canvas.draw_polyline(glyph, Color("#D7C691"), 2, true)
-		canvas.draw_line(Vector2(-13, -15), Vector2(13, -15), Color("#D7C691"), 2)
+		canvas.draw_polyline(glyph, Color("#D4D4D4"), 2, true)
+		canvas.draw_line(Vector2(-13, -15), Vector2(13, -15), Color("#D4D4D4"), 2)
 	, Rect2(-15, -57, 30, 44), 2)
 
 func _exit_visual(owner: Node2D) -> void:
@@ -356,35 +374,3 @@ func _center_strip(owner: Node2D, width: float, height: float) -> void:
 		var canvas: Node2D = get_meta("gothic_draw_target")
 		canvas.draw_line(Vector2(width * 0.5, 6), Vector2(width * 0.5, height - 6), Color("#14151A"), 3)
 	, Rect2(0, 0, width, height), 1)
-
-func _candle_layer(parent: Node2D) -> void:
-	var layer := CanvasLayer.new()
-	layer.name = "Candlelight"
-	layer.layer = 5
-	parent.add_child(layer)
-	var canvas := Node2D.new()
-	canvas.z_index = 5
-	canvas.add_to_group("gothic_visuals")
-	canvas.set_meta("draw_calls", 26)
-	canvas.set_meta("bounds", Rect2(0, 0, 1920, 1080))
-	layer.add_child(canvas)
-	canvas.draw.connect(func() -> void:
-		var centers := [Vector2(104, 360), Vector2(1816, 720), Vector2(960, 590)]
-		var time := Time.get_ticks_msec() * 0.001
-		for i in 3:
-			var breath := 1.0 + 0.08 * sin(time * 1.7 + i * TAU / 3.0)
-			for ring in range(8, 0, -1):
-				canvas.draw_circle(centers[i], 14 + ring * 15, Color(Color("#C9A227"), 0.0075 * breath))
-		for i in 2:
-			var breath := 1.0 + 0.08 * sin(time * 1.7 + i * TAU / 3.0)
-			var flame := PackedVector2Array()
-			for sample in 16:
-				var angle := TAU * sample / 16.0
-				flame.append(centers[i] + Vector2(cos(angle) * 2.5, sin(angle) * 7 * breath))
-			canvas.draw_colored_polygon(flame, Color(Color("#E8E3D3"), 0.7 * breath))
-	)
-	var redraw := func() -> void:
-		layer.transform = parent.get_viewport().get_canvas_transform()
-		canvas.queue_redraw()
-	RenderingServer.frame_pre_draw.connect(redraw)
-	canvas.tree_exiting.connect(func() -> void: RenderingServer.frame_pre_draw.disconnect(redraw))

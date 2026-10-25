@@ -37,6 +37,9 @@ func _ready() -> void:
 	add_child(_hint)
 	var graphic := Sprite2D.new()
 	graphic.texture = ART
+	var palette := ShaderMaterial.new()
+	palette.shader = preload("res://shaders/restricted_art.gdshader")
+	graphic.material = palette
 	graphic.scale = Vector2(40.0 / ART.get_width(), height / ART.get_height())
 	graphic.position = Vector2(0, -height * 0.5)
 	add_child(graphic)

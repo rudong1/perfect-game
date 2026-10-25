@@ -22,4 +22,5 @@ func _draw() -> void:
 				draw_colored_polygon(polygon, color)
 		draw_rect(Rect2(72 + i * 36, 5, 28, 15), color if found else Color("#343434"))
 	draw_polyline(PackedVector2Array([Vector2(0, 46), Vector2(25, 0), Vector2(50, 46), Vector2(0, 46)]), Color("#d3d3d3"), 1.5, true)
-	draw_string(ThemeDB.fallback_font, Vector2(72, 46), "色彩  %d / 3" % _state.collected_count(), HORIZONTAL_ALIGNMENT_LEFT, -1, 19, Color("#e3e3e3"))
+	var caption := "色彩  已赠予" if _state.has_offered_colors() else "色彩  %d / 3" % _state.collected_count()
+	draw_string(ThemeDB.fallback_font, Vector2(72, 46), caption, HORIZONTAL_ALIGNMENT_LEFT, -1, 19, Color("#e3e3e3"))

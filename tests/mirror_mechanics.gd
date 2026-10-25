@@ -84,32 +84,62 @@ func key_e() -> void:
 	await frames(10)
 
 func push_to(slab: StaticBody2D, target_x: float) -> void:
-	await walk_to(slab.position.x - 55)
-	Input.action_press("move_right")
+	var direction := 1.0 if target_x > slab.position.x else -1.0
+	await walk_to(slab.position.x - direction * 55)
+	var action := "move_right" if direction > 0 else "move_left"
+	Input.action_press(action)
 	for tick in 420:
 		await physics_frame
-		if slab.position.x >= target_x:
+		if direction * (slab.position.x - target_x) >= 0:
 			break
-	Input.action_release("move_right")
+	Input.action_release(action)
 	await frames(15)
 
 func solve_twins(index: int) -> void:
-	await flip_to(true)
 	if index == 0:
-		await walk_to(730)
+		await flip_to(false)
+		await walk_to(650)
+		await frames(40)
+		await walk_to(430)
 		await frames(12)
 		var lesson: Node = game.level_root.get_node("RoomPuzzle")
-		check(lesson.solved_steps == 1 and not game._goal.enabled, "the first paired plates leave a second cooperative challenge to solve")
-		await walk_to(1100)
+		check(lesson.solved_steps == 1 and not game._goal.enabled, "the first reverse pair leaves two more cooperative gates locked")
+		await flip_to(true)
+		await walk_to(980)
+		await frames(12)
+		check(lesson.solved_steps == 2 and not game._goal.enabled, "a second ceiling pair still leaves the narrower return seal to solve")
+		await walk_to(1240)
 		await flip_to(false)
-		await walk_to(1485)
+		check(state.has_checkpoint and state.checkpoint_stage == 2, "the midpoint checkpoint saves the two completed gates")
+		await walk_to(1620)
 		await frames(40)
-		await walk_to(1260)
+		await walk_to(1420)
 	else:
+		await flip_to(true)
 		await walk_to(605)
 		await frames(40)
 		await walk_to(380)
 	await frames(12)
+
+func solve_red_entry() -> void:
+	await flip_to(true)
+	await walk_to(640)
+	await frames(40)
+	await walk_to(430)
+	await frames(12)
+	var puzzle: Node = game.level_root.get_node("RoomPuzzle")
+	check(puzzle.solved_steps == 1 and not game._goal.enabled, "red begins with a real twin-operated gate before the moving mirror")
+	await flip_to(false)
+
+func solve_red_return(slab: StaticBody2D) -> void:
+	await push_to(slab, 940)
+	if game.player.position.x < slab.position.x:
+		await walk_to(810)
+		await key_e()
+	await walk_to(1070)
+	await key_e()
+	check(game.level_root.get_node("RoomPuzzle").solved_steps == 3 and game._goal.enabled, "the reverse calibration and actual arrival solve the third red mechanism")
+	await key_e()
 
 func solve_light() -> void:
 	var circuit: Node2D = game.level_root.get_node("PrismCircuit")
@@ -258,6 +288,15 @@ func run() -> void:
 	legacy.set_value("game", "collected_mask", 7)
 	legacy.save(state.SAVE_PATH)
 	check(state.load_from_disk() and state.is_finale_pending() and state.collected_count() == 3, "previously finished saves can enter the new finale with their colours preserved")
+	legacy.set_value("game", "version", 5)
+	legacy.set_value("game", "ending_reached", true)
+	legacy.save(state.SAVE_PATH)
+	check(state.load_from_disk() and state.is_finale_pending() and not state.darksky_revived and state.collected_count() == 3, "a completed old disappearance ending can resume the new rescue with its colours")
+	legacy.set_value("game", "current_level", 1)
+	legacy.set_value("game", "checkpoint_level", 1)
+	legacy.set_value("game", "checkpoint_stage", 1)
+	legacy.save(state.SAVE_PATH)
+	check(state.load_from_disk() and not state.has_checkpoint, "old early-room checkpoints do not bypass the new mechanisms")
 
 	var frames_resource: SpriteFrames = player.sprite.sprite_frames
 	check(frames_resource.get_frame_count("run") == 8 and frames_resource.get_frame_count("sprint") == 8, "eight actual run frames replace four-frame motion")
@@ -285,6 +324,10 @@ func run() -> void:
 	# A translated portal destination is checked against actual world collision.
 	await room(1)
 	var transport: StaticBody2D = game.level_root.get_node("MirrorSlab")
+	var red_puzzle: Node = game.level_root.get_node("RoomPuzzle")
+	check(red_puzzle.steps.size() == 3 and not red_puzzle.steps[1].marker.visible and not red_puzzle.steps[2].marker.visible, "red's two calibration marks remain hidden until their own mechanism is active")
+	await solve_red_entry()
+	check(red_puzzle.steps[1].marker.visible, "opening the entry gate reveals the first calibration mark")
 	await push_to(transport, 1080)
 	check(transport.position.x >= 1040 and transport.position.x <= 1120, "pushing reaches the marked transport interval")
 	var before: Vector2 = player.position
@@ -296,8 +339,17 @@ func run() -> void:
 	check(not game._goal.enabled, "walking onto the receiver cannot substitute for the correctly reflected arrival")
 	await key_e()
 	await key_e()
-	check(game._goal.enabled, "a return to the entry mark and correctly reflected arrival open the corridor")
+	check(red_puzzle.solved_steps == 2 and not game._goal.enabled, "a correct first transit still leaves the reverse-mirror mechanism locked")
+	check(not red_puzzle.steps[1].marker.visible and red_puzzle.steps[2].marker.visible, "the return mechanism reveals a different mirror calibration")
 	check(absf(transport.push_velocity) < 0.1, "friction stops the mirror after input releases")
+	await walk_to(1300)
+	check(state.checkpoint_stage == 2, "red's second checkpoint remembers the entry gate and outward transit")
+	player.respawn()
+	await frames(12)
+	check(red_puzzle.solved_steps == 2 and not transport.used and not game._goal.enabled, "retry restores earned doors without inventing the return transit")
+	await walk_to(930)
+	await key_e()
+	await solve_red_return(transport)
 	player.position = Vector2(transport.position.x + 100, 900)
 	exit = transport.exit_for(player.position)
 	var blocker := StaticBody2D.new()
@@ -353,6 +405,7 @@ func run() -> void:
 		check(bool(game._background.get_shader_parameter("use_scene_texture")) and game._background.get_shader_parameter("scene_texture") == game.CHURCH_BACKGROUNDS[index], "world uses its authored cathedral background")
 		check(game.CHURCH_BACKGROUNDS[index].get_width() >= 1600 and game._world_width == 1920, "background and room retain the single-screen composition")
 		check(game.level_root.get_node("RegionDressing").region == index, "each colour region has distinct physical-looking set dressing")
+		check(not game.level_root.has_node("Candlelight"), "no procedural candle flames or amber glows remain")
 		var draw_calls := 80
 		for visual in get_nodes_in_group("gothic_visuals"):
 			draw_calls += int(visual.get_meta("draw_calls"))
@@ -377,10 +430,13 @@ func run() -> void:
 		if index == 0:
 			await solve_twins(0)
 		elif index == 1:
+			await solve_red_entry()
 			var campaign_slab: StaticBody2D = game.level_root.get_node("MirrorSlab")
 			await push_to(campaign_slab, 1080)
 			await walk_to(930)
 			await key_e()
+			check(puzzle.solved_steps == 2 and not game._goal.enabled, "outward reflection alone does not finish the harder red room")
+			await solve_red_return(campaign_slab)
 		elif index == 2:
 			await solve_light()
 		else:
@@ -438,40 +494,70 @@ func run() -> void:
 		glass_is_valid = glass_is_valid and not Geometry2D.triangulate_polygon(shard.points).is_empty() and shard.uvs.size() == shard.points.size()
 	check(glass_is_valid, "all clipped glass fragments remain valid renderable polygons")
 	await frames(70)
-	check(chase.phase == chase.Phase.FAREWELL and not chase.shadow.visible, "breaking the mirror makes the pursuing reflection disappear")
-	check(chase._caption.text.contains("夺走") and chase._memory_glass.visible, "the goodbye begins with the protagonist confronting a reflection retained in a shard")
-	check(not state.is_game_complete(), "the finale waits for the goodbye before marking the journey complete")
+	check(chase.phase == chase.Phase.CONFESSION and not chase.shadow.visible, "breaking the mirror stops the pursuit and leaves an image in a shard")
+	check(chase._caption.text.contains("赠予") and chase._memory_glass.visible, "the mirror's newly revealed inscription explains voluntary giving before the rescue")
+	check(not state.is_game_complete(), "the finale waits for the rescue before marking the journey complete")
 	chase._next.pressed.emit()
-	check(chase.farewell_index == 0, "the shatter input cannot accidentally skip the opening goodbye beat")
+	check(chase.confession_index == 0, "the shatter input cannot accidentally skip her explanation")
 	var heard_apology := false
 	var heard_response := false
-	var saw_palms := false
-	for i in chase.FAREWELL_BEATS.size():
-		if i < chase.FAREWELL_BEATS.size() - 1:
-			check(not chase._caption.text.contains("darksky"), "the reflection's true name remains hidden through the extended goodbye")
+	var heard_history := false
+	for i in chase.CONFESSION_BEATS.size():
+		check(not chase._caption.text.contains("darksky"), "the reflection's true name stays hidden while her history and the gift are explained")
 		if chase._caption.text.contains("对不起"):
 			heard_apology = true
-		if chase._caption.text.contains("没办法说没关系"):
+		if chase._caption.text.contains("我还在生气"):
 			heard_response = true
-		if i == chase.FAREWELL_BEATS.size() - 2:
-			check(chase._caption.text == "也许，这也算是不错的告别吧。", "the requested farewell follows their admission and response")
-		if i == chase.FAREWELL_BEATS.size() - 1:
-			check(chase._caption.text.contains("darksky"), "darksky is revealed only in the last line")
-		await frames(75 if i == chase.FAREWELL_BEATS.size() - 1 else 23)
-		if chase.player.current_animation == "reach" and chase._memory.animation == &"reach" and chase._memory_glass.position.x - chase.player.position.x < 125:
-			saw_palms = true
-		if i == chase.FAREWELL_BEATS.size() - 1:
-			check(chase._memory_glass.modulate.a < 0.01 and not state.is_game_complete(), "her image dissolves while the final name remains readable before departure")
+		if chase._caption.text.contains("自己的身体"):
+			heard_history = true
+		await frames(23)
 		chase._next.pressed.emit()
-	check(heard_apology and heard_response and saw_palms, "the expanded goodbye includes accountability, the protagonist's response, and the opening palm gesture")
-	check(chase.phase == chase.Phase.DEPARTURE and not state.is_game_complete(), "the protagonist leaves through a transition before the ending is saved")
-	await frames(85)
-	check(state.is_game_complete() and current_scene.scene_file_path.ends_with("ending_screen.tscn"), "leaving the broken mirror completes the narrative ending")
-	check(state.load_from_disk() and state.ending_reached and state.collected_count() == 3 and state.current_level == 4, "completed goodbye and colours round-trip through save")
+	check(heard_history and heard_apology and heard_response, "the heroine hears her trapped companion's history and responds before choosing the gift")
+	check(chase.phase == chase.Phase.FUSION and state.collected_count() == 0 and state.has_offered_colors(), "voluntarily giving spends all three collected colours and starts their fusion")
+	check(chase.player.current_animation == "reach" and chase._memory.animation == &"reach", "the colour gift recalls their opening single-palm gesture")
+	check(not state.offer_colors() and not state.darksky_revived, "the gift cannot be spent twice or grant life before the transformation")
+	check(state.load_from_disk() and state.offered_mask == 7 and state.collected_count() == 0 and not state.darksky_revived, "a save during the gift preserves the spent colours and unfinished revival")
 	change_scene_to_file("res://scenes/ui/title_screen.tscn")
 	await frames(6)
 	current_scene._continue()
 	await frames(6)
-	check(current_scene.scene_file_path.ends_with("ending_screen.tscn") and state.is_game_complete(), "a completed save resumes after the goodbye instead of replaying the pursuit")
+	chase = current_scene
+	check(chase.phase == chase.Phase.FUSION and state.collected_count() == 0, "Continue resumes the saved colour fusion without replaying the chase or refunding the gift")
+	chase._next.pressed.emit()
+	await frames(10)
+	check(chase.phase == chase.Phase.FUSION and not state.darksky_revived, "dialogue input cannot skip the visible colour transformation")
+	await frames(255)
+	check(chase.phase == chase.Phase.REUNION and state.darksky_revived and state.collected_count() == 0, "the three colours fuse into a real life instead of disappearing with the mirror")
+	check(chase._memory.material == null and chase._memory_glass.modulate.a == 1, "the revived girl is opaque and no longer uses the smoky reflection material")
+	check(chase._cg.texture == chase.REVIVAL_CG and chase._cg.modulate.a == 1, "the revival uses the generated resurrection CG")
+	check(not state.is_game_complete(), "revival is saved before the girls finish their reunion")
+	change_scene_to_file("res://scenes/ui/title_screen.tscn")
+	await frames(6)
+	current_scene._continue()
+	await frames(6)
+	chase = current_scene
+	check(chase.phase == chase.Phase.REUNION and state.darksky_revived and state.collected_count() == 0, "Continue after revival resumes the reunion without resurrecting or spending again")
+	for i in chase.REUNION_BEATS.size():
+		check(chase._caption.text.contains("darksky") == (i == chase.REUNION_BEATS.size() - 1), "her true name is revealed only in the last reunion line")
+		await frames(23)
+		chase._next.pressed.emit()
+	check(chase.phase == chase.Phase.DEPARTURE and not state.is_game_complete(), "the two girls leave together through a transition before the ending is saved")
+	await frames(85)
+	check(state.is_game_complete() and current_scene.scene_file_path.ends_with("ending_screen.tscn"), "leaving together completes the resurrection ending")
+	check(current_scene.backdrop.texture.resource_path.ends_with("ending_together.png"), "the final card displays the generated hand-in-hand departure CG")
+	check(state.load_from_disk() and state.ending_reached and state.darksky_revived and state.has_offered_colors() and state.collected_count() == 0 and state.current_level == 4, "the completed resurrection and actually spent colours round-trip through save")
+	change_scene_to_file("res://scenes/ui/title_screen.tscn")
+	await frames(6)
+	current_scene._continue()
+	await frames(6)
+	check(current_scene.scene_file_path.ends_with("ending_screen.tscn") and state.is_game_complete(), "a completed save resumes at the two-girl ending CG")
+	state.begin_game("新旅程")
+	check(not state.has_offered_colors() and not state.darksky_revived and state.collected_count() == 0, "a new journey resets the gift, revival and inventory")
+	state.current_level = 4
+	state.collected_mask = 3
+	check(not state.offer_colors() and state.collected_mask == 3 and not state.revive_darksky(), "an incomplete RGB inventory cannot be consumed or revive the girl")
+	state.complete_journey()
+	check(not state.is_game_complete(), "an unrevived journey cannot bypass the rescue by completing early")
+	state.begin_game("新旅程")
 	print("MIRROR TESTS: %d checks, %d failures" % [checks, failures])
 	quit(1 if failures else 0)

@@ -14,7 +14,7 @@ const GAME_TITLE := "镜尽余色"
 const LEVELS := [
 	{
 		"title": "无色 · 双生门廊",
-		"objective": "先完成上下配合，再换面折返，用晚半拍的脚步解开第二道门。",
+		"objective": "折返、换面、再折返，完成三段双板接力，找到红色。",
 		"story_before": "「跟着我，{name}。从今天起，我就是你的倒影。」",
 		"color_name": "红色",
 		"collect_color": Color("#FF637E"),
@@ -30,7 +30,7 @@ const LEVELS := [
 	},
 	{
 		"title": "赤 · 推镜廊",
-		"objective": "推动立镜后退回门槛印记，用 E 把自己映到另一侧的接引踏板。",
+		"objective": "先解双板栅门，再校准两次镜印，完成去程与回程的穿镜。",
 		"story_before": "红光照暖了石墙，却仍穿过她的掌心。「也许，等颜色全部回来就好了。」",
 		"color_name": "蓝色",
 		"collect_color": Color("#59CFFF"),
@@ -65,7 +65,7 @@ const LEVELS := [
 		"objective": "完成分身配合、推镜传送与三色光路，走出绿色教堂。",
 		"story_before": "门后的光照亮了你。她也伸出手，掌心却仍旧是空白。",
 		"color_name": "",
-		"collect_color": Color("#C9E8A0"),
+		"collect_color": Color("#73E2A5"),
 		"bg_top": Color("#0A1811"),
 		"bg_bottom": Color("#174C34"),
 		"accent": Color("#A8E8BE"),
@@ -89,6 +89,8 @@ var has_checkpoint := false
 var light_puzzle_active := false
 var light_channels := 0
 var ending_reached := false
+var offered_mask := 0
+var darksky_revived := false
 
 func _ready() -> void:
 	# Keep the internal project/save identity stable while renaming the game.
@@ -102,6 +104,8 @@ func begin_game(name: String) -> void:
 	completed_levels = 0
 	collected_mask = 0
 	ending_reached = false
+	offered_mask = 0
+	darksky_revived = false
 	clear_save()
 	changed.emit()
 
@@ -154,8 +158,30 @@ func is_game_complete() -> bool:
 func is_finale_pending() -> bool:
 	return current_level >= MAX_LEVELS and not ending_reached
 
+func has_offered_colors() -> bool:
+	return offered_mask == 7
+
+func offer_colors() -> bool:
+	if current_level < MAX_LEVELS or collected_mask != 7 or has_offered_colors():
+		return false
+	# Spend the collected colours once. Keep a separate record so a save made
+	# during the transformation resumes it without granting or spending twice.
+	offered_mask = collected_mask
+	collected_mask = 0
+	_save_game()
+	changed.emit()
+	return true
+
+func revive_darksky() -> bool:
+	if not has_offered_colors() or darksky_revived:
+		return false
+	darksky_revived = true
+	_save_game()
+	changed.emit()
+	return true
+
 func complete_journey() -> void:
-	if current_level < MAX_LEVELS:
+	if current_level < MAX_LEVELS or not darksky_revived:
 		return
 	ending_reached = true
 	_save_game()
@@ -174,21 +200,31 @@ func load_from_disk() -> bool:
 	# Old room layouts had different checkpoints. Retain journey progress but
 	# place the player at the new room's entrance when migrating an old save.
 	var version := int(config.get_value("game", "version", 1))
-	ending_reached = bool(config.get_value("game", "ending_reached", false)) if version >= 5 else false
+	# Version 6 replaces the old disappearance ending with the rescue. Completed
+	# older journeys keep their three colours and can enter the new final scene.
+	ending_reached = bool(config.get_value("game", "ending_reached", false)) if version >= 6 else false
 	collected_mask = int(config.get_value("game", "collected_mask", (1 << mini(current_level, COLOR_COUNT)) - 1)) & 7
+	offered_mask = int(config.get_value("game", "offered_mask", 0)) & 7 if version >= 6 else 0
+	darksky_revived = bool(config.get_value("game", "darksky_revived", false)) and has_offered_colors() if version >= 6 else false
+	if has_offered_colors():
+		collected_mask = 0
+	ending_reached = ending_reached and darksky_revived
 	checkpoint_level = int(config.get_value("game", "checkpoint_level", -1)) if version >= 4 else -1
 	checkpoint_position = config.get_value("game", "checkpoint_position", Vector2.ZERO) if version >= 4 else Vector2.ZERO
 	checkpoint_stage = int(config.get_value("game", "checkpoint_stage", 0)) if version >= 4 else 0
 	has_checkpoint = bool(config.get_value("game", "has_checkpoint", false)) if version >= 4 else false
+	if version < 6 and current_level < 2:
+		has_checkpoint = false
+		checkpoint_stage = 0
 	end_light_puzzle()
 	changed.emit()
 	return true
 
 func _save_game() -> void:
 	var config := ConfigFile.new()
-	for key in ["player_name", "current_level", "completed_levels", "collected_mask", "checkpoint_stage", "checkpoint_level", "checkpoint_position", "has_checkpoint", "ending_reached"]:
+	for key in ["player_name", "current_level", "completed_levels", "collected_mask", "checkpoint_stage", "checkpoint_level", "checkpoint_position", "has_checkpoint", "ending_reached", "offered_mask", "darksky_revived"]:
 		config.set_value("game", key, get(key))
-	config.set_value("game", "version", 5)
+	config.set_value("game", "version", 6)
 	var err := config.save(SAVE_PATH)
 	if err != OK:
 		push_warning("Could not write save file (error %d)" % err)

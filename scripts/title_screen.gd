@@ -8,6 +8,9 @@ extends Control
 
 
 func _ready() -> void:
+	var palette := ShaderMaterial.new()
+	palette.shader = preload("res://shaders/restricted_art.gdshader")
+	backdrop.material = palette
 	begin_button.pressed.connect(_begin)
 	continue_button.pressed.connect(_continue)
 	var state := get_node_or_null("/root/GameState")

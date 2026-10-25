@@ -17,6 +17,7 @@ func reset() -> void:
 	goal.enabled = false
 	for step in steps:
 		step.door.close()
+	_refresh_indicators()
 
 func restore_completed(count: int) -> void:
 	solved_steps = clampi(count, 0, steps.size())
@@ -26,6 +27,15 @@ func restore_completed(count: int) -> void:
 	for i in solved_steps:
 		steps[i].door.open()
 	goal.enabled = solved_steps == steps.size()
+	_refresh_indicators()
+
+func _refresh_indicators() -> void:
+	for i in steps.size():
+		var step: Dictionary = steps[i]
+		if step.has("marker"):
+			step.marker.visible = i == solved_steps
+			for plate in step.plates:
+				plate.visible = i == solved_steps
 
 func current_hint() -> String:
 	if solved_steps >= steps.size():
@@ -54,8 +64,8 @@ func _physics_process(delta: float) -> void:
 			for plate in step.plates:
 				ready = ready and plate.is_activated
 		"slab":
-			ready = step.slab.used and step.slab.position.x >= 1040 and step.slab.position.x <= 1120
-			ready = ready and absf(step.slab.last_exit.x - step.landing_x) <= 32 and absf(step.slab.last_exit.y - 900) < 8
+			ready = step.slab.used and absf(step.slab.position.x - step.calibration_x) <= 18
+			ready = ready and absf(step.slab.last_exit.x - step.landing_x) <= 24 and absf(step.slab.last_exit.y - 900) < 8
 			ready = ready and step.plates[0].is_activated
 		"prism":
 			ready = step.circuit.channel_mask == 7
@@ -67,6 +77,7 @@ func _physics_process(delta: float) -> void:
 		solved_steps += 1
 		_hold = 0
 		goal.enabled = solved_steps == steps.size()
+		_refresh_indicators()
 	elif _is_optical(step):
 		step.door.close()
 		goal.enabled = false
