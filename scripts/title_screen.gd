@@ -50,9 +50,12 @@ func _ready() -> void:
 	if state != null and bool(state.call("has_save")):
 		continue_button.visible = true
 	_set_naming(false)
-	if state != null and bool(state.call("is_sealed_save")):
-		# Refresh the HUD progress from the sealed save before locking the menu.
-		state.call("load_from_disk")
+	# The seal lives in the save, but honour the live flag too so a failed disk
+	# write can never silently drop the player back onto an unlocked menu.
+	if state != null and (bool(state.get("mirror_sealed")) or bool(state.call("is_sealed_save"))):
+		if bool(state.call("is_sealed_save")):
+			# Refresh the HUD progress from the sealed save before locking the menu.
+			state.call("load_from_disk")
 		_enter_sealed()
 
 
