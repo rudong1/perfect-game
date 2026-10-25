@@ -97,6 +97,14 @@ func solve_twins(index: int) -> void:
 	await flip_to(true)
 	if index == 0:
 		await walk_to(730)
+		await frames(12)
+		var lesson: Node = game.level_root.get_node("RoomPuzzle")
+		check(lesson.solved_steps == 1 and not game._goal.enabled, "the first paired plates leave a second cooperative challenge to solve")
+		await walk_to(1100)
+		await flip_to(false)
+		await walk_to(1485)
+		await frames(40)
+		await walk_to(1260)
 	else:
 		await walk_to(605)
 		await frames(40)
@@ -127,6 +135,17 @@ func solve_light() -> void:
 	await walk_to(1605)
 	await flip_to(false)
 
+func prepare_chase(scene: Node2D) -> void:
+	check(scene.phase == scene.Phase.THRESHOLD and scene.shadow.scale.y < 0, "the finale starts with the companion still on the opposite side")
+	for i in scene.REVELATION_BEATS.size():
+		await frames(21)
+		if i == 1:
+			check(scene._caption.text.contains("不算活着") and not scene._caption.text.contains("darksky"), "her failed passage explains the missing living colour before revealing her name")
+		scene._next.pressed.emit()
+	check(scene.phase == scene.Phase.CROSSOVER, "the request for colour leads into a visible crossing of the mirror boundary")
+	await frames(85)
+	check(scene.phase == scene.Phase.BETRAYAL and scene.shadow.scale.y > 0 and scene.shadow.position.x < scene.player.position.x, "the companion visibly reaches the same floor behind the protagonist")
+
 func run() -> void:
 	await process_frame
 	state = root.get_node("GameState")
@@ -134,6 +153,7 @@ func run() -> void:
 	var title: Control = load("res://scenes/ui/title_screen.tscn").instantiate()
 	root.add_child(title)
 	current_scene = title
+	check(title.get_node("Title").text == state.GAME_TITLE, "the title screen uses the poetic game name")
 	title.name_edit.text = "测试"
 	title.begin_button.pressed.emit()
 	await frames(8)
@@ -252,7 +272,12 @@ func run() -> void:
 	var exit: Vector2 = transport.exit_for(before)
 	await key_e()
 	check(transport.used and absf(player.position.x - exit.x) < 2, "E uses the exact horizontal reflection formula")
-	check(game._goal.enabled, "a correctly positioned mirror plus actual transit opens the corridor")
+	check(not game._goal.enabled, "crossing a calibrated mirror without landing on the receiver does not open the corridor")
+	await walk_to(1230)
+	check(not game._goal.enabled, "walking onto the receiver cannot substitute for the correctly reflected arrival")
+	await key_e()
+	await key_e()
+	check(game._goal.enabled, "a return to the entry mark and correctly reflected arrival open the corridor")
 	check(absf(transport.push_velocity) < 0.1, "friction stops the mirror after input releases")
 	player.position = Vector2(transport.position.x + 100, 900)
 	exit = transport.exit_for(player.position)
@@ -335,6 +360,7 @@ func run() -> void:
 		elif index == 1:
 			var campaign_slab: StaticBody2D = game.level_root.get_node("MirrorSlab")
 			await push_to(campaign_slab, 1080)
+			await walk_to(930)
 			await key_e()
 		elif index == 2:
 			await solve_light()
@@ -349,7 +375,7 @@ func run() -> void:
 		await walk_to(1740)
 		check(state.collected_count() == mini(index + 1, 3) and (index == 3 or state.has_color(index)), "three colors fill progress; green-world exit adds no extra color")
 		check(not state.collect_current_color(), "duplicate collection cannot inflate prism progress")
-		await frames(60)
+		await frames(80 if index == 3 else 60)
 		check(state.current_level == index + 1, "color pickup advances without prism intermission")
 	check(unique_colors.size() == 3 and unique_colors[0].r > unique_colors[0].b and unique_colors[1].b > unique_colors[1].r and unique_colors[2].g > unique_colors[2].r, "collectibles are exactly red, blue, green in order")
 	check(state.is_finale_pending() and not state.is_game_complete() and current_scene.scene_file_path.ends_with("finale.tscn"), "green-world exit leads to the playable betrayal instead of prematurely completing the story")
@@ -362,8 +388,9 @@ func run() -> void:
 	await frames(6)
 	check(current_scene.scene_file_path.ends_with("finale.tscn") and state.collected_count() == 3, "Continue actually reloads the saved chase instead of restarting the puzzles")
 	var chase: Node2D = current_scene
-	check(not Geometry2D.triangulate_polygon(chase.mirror_body._outline).is_empty(), "the giant mirror's sampled arch triangulates into visible glass")
-	check(chase.phase == chase.Phase.BETRAYAL and chase.shadow.position.x < chase.player.position.x, "the reflection steps onto the same floor behind the protagonist")
+	check(not Geometry2D.triangulate_polygon(chase.mirror_body._outline).is_empty(), "the generated mirror has valid fragmentation bounds")
+	check(chase.mirror_body._graphic.texture is AtlasTexture, "the giant mirror uses the generated Gothic artwork")
+	await prepare_chase(chase)
 	await frames(50)
 	Input.action_press("move_right")
 	await frames(40)
@@ -376,15 +403,20 @@ func run() -> void:
 	await frames(45)
 	Input.action_press("move_right")
 	Input.action_press("sprint")
+	var parallax_seen := false
 	for tick in 900:
 		await physics_frame
+		if not parallax_seen and chase.camera.position.x > 1300:
+			check(chase.backdrop.near_strip.position.x < chase.backdrop.far_strip.position.x and chase.backdrop.far_strip.position.x < 0, "both architecture layers move with the camera at different depths")
+			parallax_seen = true
 		if chase.phase == chase.Phase.SHATTER:
 			break
 	release_controls()
-	check(chase.mirror_body.is_broken and chase.player.position.x >= chase.MIRROR_X - 180, "actual rightward movement reaches and shatters the giant blocking mirror")
+	check(parallax_seen, "the chase actually scrolls the church instead of only shifting the paving")
+	check(chase.mirror_body.is_broken and chase.player.position.x >= chase.MIRROR_X - chase.mirror_body.impact_distance - 8, "actual rightward movement reaches and shatters the giant blocking mirror")
 	var glass_is_valid: bool = not chase.mirror_body._shards.is_empty()
 	for shard in chase.mirror_body._shards:
-		glass_is_valid = glass_is_valid and not Geometry2D.triangulate_polygon(shard.points).is_empty()
+		glass_is_valid = glass_is_valid and not Geometry2D.triangulate_polygon(shard.points).is_empty() and shard.uvs.size() == shard.points.size()
 	check(glass_is_valid, "all clipped glass fragments remain valid renderable polygons")
 	await frames(70)
 	check(chase.phase == chase.Phase.FAREWELL and not chase.shadow.visible, "breaking the mirror makes the pursuing reflection disappear")

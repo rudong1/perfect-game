@@ -27,7 +27,7 @@ offset_top = 130.0
 offset_right = 1220.0
 offset_bottom = 260.0
 theme_override_font_sizes/font_size = 92
-text = "镜中同行"
+text = "镜尽余色"
 
 [node name="Subtitle" type="Label" parent="." unique_id=1132698168]
 modulate = Color(0.56078434, 0.6392157, 0.7490196, 1)
@@ -37,7 +37,7 @@ offset_top = 270.0
 offset_right = 1030.0
 offset_bottom = 310.0
 theme_override_font_sizes/font_size = 22
-text = "A JOURNEY WITH YOUR SHADOW"
+text = "WHERE MIRRORS END"
 
 [node name="Story" type="Label" parent="." unique_id=2122331027]
 modulate = Color(0.78039217, 0.83137256, 0.90588236, 1)

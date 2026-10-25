@@ -9,11 +9,12 @@ signal checkpoint_saved(position: Vector2)
 const MAX_LEVELS := 4
 const COLOR_COUNT := 3
 const SAVE_PATH := "user://mirror_save.cfg"
+const GAME_TITLE := "镜尽余色"
 
 const LEVELS := [
 	{
 		"title": "无色 · 双生门廊",
-		"objective": "按 M 换面，与晚一步的分身同时压住上下踏板，找到红色。",
+		"objective": "先完成上下配合，再换面折返，用晚半拍的脚步解开第二道门。",
 		"story_before": "「跟着我，{name}。从今天起，我就是你的倒影。」",
 		"color_name": "红色",
 		"collect_color": Color("#FF637E"),
@@ -29,8 +30,8 @@ const LEVELS := [
 	},
 	{
 		"title": "赤 · 推镜廊",
-		"objective": "推动立镜改变反射轴，按 E 穿过镜面，找到蓝色。",
-		"story_before": "「原来红色这么暖……我已经快忘记了。」她的手在镜面上多停了一会儿。",
+		"objective": "推动立镜后退回门槛印记，用 E 把自己映到另一侧的接引踏板。",
+		"story_before": "红光照暖了石墙，却仍穿过她的掌心。「也许，等颜色全部回来就好了。」",
 		"color_name": "蓝色",
 		"collect_color": Color("#59CFFF"),
 		"bg_top": Color("#1A070D"),
@@ -46,7 +47,7 @@ const LEVELS := [
 	{
 		"title": "青 · 三色回响",
 		"objective": "按 M 调整最近的反射镜，并移动立镜避开光路，让三色同时抵达。",
-		"story_before": "「有了全部颜色，就能离开这里。」她没有说，是谁能够离开。",
+		"story_before": "「听说镜门只记得活人的颜色。」她低下头，又说：「我们先把它们找回来。」",
 		"color_name": "绿色",
 		"collect_color": Color("#73E2A5"),
 		"bg_top": Color("#04101F"),
@@ -62,7 +63,7 @@ const LEVELS := [
 	{
 		"title": "翠 · 最后的同行",
 		"objective": "完成分身配合、推镜传送与三色光路，走出绿色教堂。",
-		"story_before": "出口近了。那个总比你晚半拍的脚步声，第一次追上了你。",
+		"story_before": "门后的光照亮了你。她也伸出手，掌心却仍旧是空白。",
 		"color_name": "",
 		"collect_color": Color("#C9E8A0"),
 		"bg_top": Color("#0A1811"),
@@ -88,6 +89,11 @@ var has_checkpoint := false
 var light_puzzle_active := false
 var light_channels := 0
 var ending_reached := false
+
+func _ready() -> void:
+	# Keep the internal project/save identity stable while renaming the game.
+	if DisplayServer.get_name() != "headless":
+		DisplayServer.window_set_title(GAME_TITLE)
 
 func begin_game(name: String) -> void:
 	end_light_puzzle()

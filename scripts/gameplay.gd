@@ -78,13 +78,22 @@ func _on_color_found() -> void:
 	_mirror.input_enabled = false
 	player.set_physics_process(false)
 	if _goal.is_exit:
-		_show_toast("出口出现了。身后的脚步，却没有停。", _state.get_level().accent)
+		_show_toast("门开了。她的倒影却还留在门内。", _state.get_level().accent)
 	else:
 		_state.collect_current_color()
 		_show_toast("找到" + _state.get_level().color_name, _state.get_level().collect_color)
-	await get_tree().create_timer(0.75).timeout
+	await get_tree().create_timer(0.5 if _goal.is_exit else 0.75).timeout
 	if not is_inside_tree():
 		return
+	if _goal.is_exit:
+		var veil := ColorRect.new()
+		veil.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		veil.color = Color(0, 0, 0, 0)
+		veil.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		$HUD.add_child(veil)
+		var fade := create_tween()
+		fade.tween_property(veil, "color:a", 1.0, 0.5)
+		await fade.finished
 	_state.advance_level()
 	load_level()
 

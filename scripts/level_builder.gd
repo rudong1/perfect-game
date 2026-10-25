@@ -21,15 +21,20 @@ func build(index: int, parent: Node2D) -> Dictionary:
 	var steps: Array = []
 	match index:
 		0:
-			var lesson := _step(parent, [[730, true, false], [590, false, true]], 1100, true)
+			var lesson := _step(parent, [[730, true, false], [590, false, true]], 1020, true)
 			lesson.hint = "按 M 换面，向右走：你踩上方本体踏板，晚一步的影子踩下方踏板。"
 			steps.append(lesson)
+			var return_step := _step(parent, [[1260, false, false], [1400, true, true]], 1580, false)
+			return_step.hint = "再按 M 回到地面。先越过远处踏板，再折返，让晚半拍的她停在另一块上。"
+			steps.append(return_step)
 		1:
 			var slab := _slab(parent)
 			var transit := _step(parent, [], 1650, false)
 			transit.kind = "slab"
 			transit.slab = slab
-			transit.hint = "A / D 推动立镜，移入地面的金色刻度，再靠近按 E 穿到镜中另一侧。"
+			transit.plates.append(_plate(parent, 1230, false, false, "接引踏板"))
+			transit.landing_x = 1230.0
+			transit.hint = "推镜入刻度，再退回门槛印记。按 E 后，要直接映到另一侧的接引踏板上。"
 			steps.append(transit)
 			_mirror_target(parent)
 		2:
@@ -53,6 +58,8 @@ func build(index: int, parent: Node2D) -> Dictionary:
 	puzzle.steps = steps
 	puzzle.goal = goal
 	parent.add_child(puzzle)
+	if index == 0:
+		_checkpoint(parent, 1120)
 	return {"spawn": Vector2(180, 900), "goal": goal, "width": WORLD_WIDTH}
 
 func _step(parent: Node2D, specifications: Array, door_x: float, mirrored: bool) -> Dictionary:
@@ -74,7 +81,7 @@ func _step(parent: Node2D, specifications: Array, door_x: float, mirrored: bool)
 	parent.add_child(door)
 	return {"kind": "plate", "plates": plates, "door": door, "mirrored": mirrored, "hint": "先越过踏板，再回头，给影子留出半拍。"}
 
-func _plate(parent: Node2D, x: float, ceiling: bool, shadow: bool) -> Area2D:
+func _plate(parent: Node2D, x: float, ceiling: bool, shadow: bool, caption: String = "") -> Area2D:
 	var area := Area2D.new()
 	area.name = ("ShadowPlate" if shadow else "PlayerPlate") + str(int(x))
 	area.position = Vector2(x, 192 if ceiling else 888)
@@ -89,7 +96,7 @@ func _plate(parent: Node2D, x: float, ceiling: bool, shadow: bool) -> Area2D:
 	var tint := Color("#bfbfbf") if shadow else Color("#efefef")
 	_plate_visual(area, shape.size, tint)
 	parent.add_child(area)
-	_hint(area, "影子踏板" if shadow else "本体踏板", Vector2(0, 54 if ceiling else -52), tint)
+	_hint(area, caption if not caption.is_empty() else ("影子踏板" if shadow else "本体踏板"), Vector2(0, 54 if ceiling else -52), tint)
 	return area
 
 func _fragment(parent: Node2D, is_exit: bool) -> Area2D:
@@ -111,12 +118,12 @@ func _fragment(parent: Node2D, is_exit: bool) -> Area2D:
 	fragment.hint = _hint(fragment, _palette.color_name + "碎片", Vector2(0, -110), _palette.collect_color)
 	return fragment
 
-func _checkpoint(parent: Node2D) -> void:
+func _checkpoint(parent: Node2D, x: float = 270.0) -> void:
 	var area := Area2D.new()
-	area.name = "Checkpoint"
-	area.position = Vector2(270, 850)
+	area.name = "Checkpoint" if is_equal_approx(x, 270) else "Checkpoint%d" % int(x)
+	area.position = Vector2(x, 850)
 	area.set_script(CHECKPOINT)
-	area.respawn_position = Vector2(270, 900)
+	area.respawn_position = Vector2(x, 900)
 	var collision := CollisionShape2D.new()
 	var shape := RectangleShape2D.new()
 	shape.size = Vector2(60, 100)
@@ -189,11 +196,18 @@ func _mirror_target(parent: Node2D) -> void:
 		canvas.draw_line(Vector2(1040, 897), Vector2(1120, 897), Color("#C9A227"), 5)
 		for x in [1040.0, 1120.0]:
 			canvas.draw_line(Vector2(x, 881), Vector2(x, 900), Color("#C9A227"), 2)
-	, Rect2(1038, 879, 84, 23), 3)
+		canvas.draw_line(Vector2(1080, 884), Vector2(1080, 900), Color("#D7C691"), 2)
+	, Rect2(1038, 879, 84, 23), 4)
 	var marker := Node2D.new()
 	marker.position = Vector2(1080, 900)
 	parent.add_child(marker)
 	_hint(marker, "将镜面推入刻度", Vector2(0, 60), Color("#D7C691"))
+	_paint(parent, func() -> void:
+		var canvas: Node2D = get_meta("gothic_draw_target")
+		var points := PackedVector2Array([Vector2(930, 879), Vector2(944, 890), Vector2(930, 900), Vector2(916, 890), Vector2(930, 879)])
+		canvas.draw_polyline(points, Color("#D7C691"), 2, true)
+		canvas.draw_line(Vector2(902, 899), Vector2(958, 899), Color("#D7C691"), 3)
+	, Rect2(900, 877, 60, 25), 2)
 
 func _paint(parent: Node2D, painter: Callable, bounds: Rect2, calls: int) -> Node2D:
 	var visual := Node2D.new()

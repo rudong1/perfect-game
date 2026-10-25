@@ -55,6 +55,8 @@ func _physics_process(delta: float) -> void:
 				ready = ready and plate.is_activated
 		"slab":
 			ready = step.slab.used and step.slab.position.x >= 1040 and step.slab.position.x <= 1120
+			ready = ready and absf(step.slab.last_exit.x - step.landing_x) <= 32 and absf(step.slab.last_exit.y - 900) < 8
+			ready = ready and step.plates[0].is_activated
 		"prism":
 			ready = step.circuit.channel_mask == 7
 		"transit_prism":

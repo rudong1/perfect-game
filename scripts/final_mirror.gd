@@ -1,92 +1,110 @@
 extends Node2D
-## A real blocking mirror that breaks into deterministic, animated glass shards.
+## The ornate mirror and its fragments share the same generated artwork.
 signal shattered
+const ART = preload("res://assets/props/gothic_mirror.tres")
+const ART_HEIGHT := 700.0
 var is_broken := false
+var impact_distance := 180.0
 var _outline := PackedVector2Array()
 var _collision: CollisionShape2D
 var _portrait: Sprite2D
+var _graphic: Sprite2D
+var _art_rect := Rect2()
+var _source_rect := Rect2()
 var _shards: Array = []
 var _age := 0.0
+var _passage_tween: Tween
 
 func _ready() -> void:
-	var scale_xy := Vector2(312.0 / 64.0, 680.0 / 143.4256)
-	_outline.append(Vector2(-32, 0) * scale_xy)
-	for i in 17:
-		var angle := lerpf(PI, PI * 4.0 / 3.0, i / 16.0)
-		_outline.append((Vector2(32, -88) + Vector2.from_angle(angle) * 64) * scale_xy)
-	for i in 17:
-		var angle := lerpf(-PI / 3.0, 0, i / 16.0)
-		_outline.append((Vector2(-32, -88) + Vector2.from_angle(angle) * 64) * scale_xy)
-	_outline.append(Vector2(32, 0) * scale_xy)
-	# The two sampled arcs meet at the same apex. Remove near-duplicates at
-	# this larger scale before triangulating the fill or generating shards.
-	_outline = Geometry2D.convex_hull(_outline)
-	_outline.remove_at(_outline.size() - 1)
+	_source_rect = ART.region
+	var size := _source_rect.size * (ART_HEIGHT / _source_rect.size.y)
+	_art_rect = Rect2(Vector2(-size.x * 0.5, -size.y), size)
+	_outline = PackedVector2Array([_art_rect.position, _art_rect.position + Vector2(size.x, 0), _art_rect.end, _art_rect.position + Vector2(0, size.y)])
+	impact_distance = size.x * 0.5 + 20
+	_graphic = Sprite2D.new()
+	_graphic.texture = ART
+	_graphic.scale = Vector2.ONE * (ART_HEIGHT / _source_rect.size.y)
+	_graphic.position = Vector2(0, -ART_HEIGHT * 0.5)
+	add_child(_graphic)
 	var body := StaticBody2D.new()
 	body.name = "GlassBody"
 	body.collision_layer = 1
 	_collision = CollisionShape2D.new()
 	var shape := RectangleShape2D.new()
-	shape.size = Vector2(240, 660)
+	shape.size = Vector2(size.x * 0.90, ART_HEIGHT - 20)
 	_collision.shape = shape
-	_collision.position = Vector2(0, -330)
+	_collision.position = Vector2(0, -shape.size.y * 0.5)
 	body.add_child(_collision)
 	add_child(body)
 	_portrait = Sprite2D.new()
 	_portrait.texture = preload("res://assets/characters/hero/hero_frames.tres").get_frame_texture("idle", 0)
 	_portrait.centered = false
 	_portrait.offset = Vector2(-160, -342)
-	_portrait.scale = Vector2(0.87, 0.87)
-	_portrait.position = Vector2(0, -100)
+	_portrait.scale = Vector2(0.70, 0.70)
+	_portrait.position = Vector2(0, -105)
 	_portrait.flip_h = true
-	_portrait.modulate = Color(0.65, 0.75, 0.84, 0.28)
+	_portrait.modulate = Color(0.55, 0.65, 0.72, 0.20)
 	add_child(_portrait)
 
 func reset() -> void:
+	if _passage_tween != null:
+		_passage_tween.kill()
 	is_broken = false
 	_age = 0
 	_shards.clear()
 	_collision.set_deferred("disabled", false)
 	_portrait.visible = true
+	_portrait.position = Vector2(0, -105)
+	_portrait.modulate.a = 0.20
+	_portrait.texture = preload("res://assets/characters/hero/hero_frames.tres").get_frame_texture("idle", 0)
+	_graphic.visible = true
 	queue_redraw()
+
+func attempt_passage() -> void:
+	_portrait.texture = preload("res://assets/characters/hero/hero_frames.tres").get_frame_texture("push", 0)
+	_passage_tween = create_tween()
+	_passage_tween.tween_property(_portrait, "modulate:a", 0.72, 0.35)
+	_passage_tween.parallel().tween_property(_portrait, "position:x", -20.0, 0.35)
+	_passage_tween.tween_interval(0.3)
+	_passage_tween.tween_property(_portrait, "modulate:a", 0.20, 0.4)
+	_passage_tween.parallel().tween_property(_portrait, "position:x", 0.0, 0.4)
+	_passage_tween.tween_callback(func() -> void:
+		_portrait.texture = preload("res://assets/characters/hero/hero_frames.tres").get_frame_texture("idle", 0)
+	)
 
 func shatter() -> void:
 	if is_broken:
 		return
 	is_broken = true
+	if _passage_tween != null:
+		_passage_tween.kill()
 	_age = 0
 	_collision.set_deferred("disabled", true)
 	_portrait.visible = false
+	_graphic.visible = false
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 8401
 	var grid: Array[Vector2] = []
 	for row in 7:
 		for column in 5:
-			var point := Vector2(-156 + column * 78, -680 + row * (680.0 / 6.0))
+			var point := _art_rect.position + _art_rect.size * Vector2(column / 4.0, row / 6.0)
 			if column > 0 and column < 4:
-				point.x += rng.randf_range(-16, 16)
+				point.x += rng.randf_range(-0.15, 0.15) * _art_rect.size.x / 4.0
 			if row > 0 and row < 6:
-				point.y += rng.randf_range(-20, 20)
+				point.y += rng.randf_range(-16, 16)
 			grid.append(point)
 	for row in 6:
 		for column in 4:
 			var i := row * 5 + column
-			var a := grid[i]
-			var b := grid[i + 1]
-			var c := grid[i + 6]
-			var d := grid[i + 5]
-			for triangle in [PackedVector2Array([a, b, c]), PackedVector2Array([a, c, d])]:
-				for clipped in Geometry2D.intersect_polygons(triangle, _outline):
-					if Geometry2D.triangulate_polygon(clipped).is_empty():
-						continue
-					var point := Vector2.ZERO
-					for vertex in clipped:
-						point += vertex
-					point /= clipped.size()
-					var local := PackedVector2Array()
-					for vertex in clipped:
-						local.append(vertex - point)
-					_shards.append({"points": local, "position": point, "velocity": Vector2(rng.randf_range(-160, 270), rng.randf_range(-240, -80)), "angle": 0.0, "spin": rng.randf_range(-3, 3)})
+			for triangle in [PackedVector2Array([grid[i], grid[i + 1], grid[i + 6]]), PackedVector2Array([grid[i], grid[i + 6], grid[i + 5]])]:
+				var point: Vector2 = (triangle[0] + triangle[1] + triangle[2]) / 3.0
+				var local := PackedVector2Array()
+				var uvs := PackedVector2Array()
+				for vertex in triangle:
+					local.append(vertex - point)
+					var unit: Vector2 = (vertex - _art_rect.position) / _art_rect.size
+					uvs.append((_source_rect.position + unit * _source_rect.size) / ART.atlas.get_size())
+				_shards.append({"points": local, "uvs": uvs, "position": point, "velocity": Vector2(rng.randf_range(-160, 270), rng.randf_range(-240, -80)), "angle": 0.0, "spin": rng.randf_range(-3, 3)})
 	shattered.emit()
 	queue_redraw()
 
@@ -101,24 +119,16 @@ func _process(delta: float) -> void:
 	queue_redraw()
 
 func _draw() -> void:
-	if is_broken:
-		var alpha := clampf(1.0 - _age / 1.8, 0, 1)
-		for shard in _shards:
-			draw_set_transform(shard.position, shard.angle)
-			draw_colored_polygon(shard.points, Color(0.5, 0.65, 0.75, 0.42 * alpha))
-			var rim: PackedVector2Array = shard.points.duplicate()
-			rim.append(rim[0])
-			draw_polyline(rim, Color(0.8, 0.87, 0.94, alpha), 1.5, true)
-		draw_set_transform(Vector2.ZERO)
+	if not is_broken:
 		return
-	draw_colored_polygon(_outline, Color("#14252B"))
-	var rim := _outline.duplicate()
-	rim.append(rim[0])
-	draw_polyline(rim, Color("#B7C5CF"), 8, true)
-	var inner := PackedVector2Array()
-	for point in rim:
-		inner.append(Vector2(0, -340) + (point - Vector2(0, -340)) * 0.95)
-	draw_polyline(inner, Color("#C9A227"), 2, true)
-	for i in 3:
-		var x := -62.0 + i * 62
-		draw_line(Vector2(x, -580), Vector2(x + 35, -130), Color(0.65, 0.8, 0.9, 0.16), 9)
+	var alpha := clampf(1.0 - _age / 1.8, 0, 1)
+	for shard in _shards:
+		draw_set_transform(shard.position, shard.angle)
+		var colors := PackedColorArray()
+		for point in shard.points:
+			colors.append(Color(1, 1, 1, alpha))
+		draw_polygon(shard.points, colors, shard.uvs, ART.atlas)
+		var rim: PackedVector2Array = shard.points.duplicate()
+		rim.append(rim[0])
+		draw_polyline(rim, Color(0.8, 0.87, 0.94, alpha * 0.25), 1, true)
+	draw_set_transform(Vector2.ZERO)
