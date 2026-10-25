@@ -2,6 +2,7 @@ extends Node2D
 ## Screen-space artwork tracks the same camera as the world-space paving.
 const FAR = preload("res://assets/backgrounds/chase_far.png")
 const NEAR = preload("res://assets/backgrounds/chase_near.png")
+const PALETTE = preload("res://scripts/palette.gd")
 const FAR_SPEED := 0.42
 const NEAR_SPEED := 0.78
 var camera: Camera2D
@@ -63,7 +64,7 @@ func _draw() -> void:
 	draw_rect(Rect2(0, 0, corridor_width, 180), _stone(Color("#1C2029")))
 	draw_rect(Rect2(0, 910, corridor_width, 12), _stone(Color("#3A3F48")))
 	draw_line(Vector2(0, 900), Vector2(corridor_width, 900), _stone(Color("#A8B6B2")), 3)
-	var colours := [Color("#FF637E"), Color("#59CFFF"), Color("#73E2A5")]
+	var colours := PALETTE.JOURNEY_COLORS
 	for i in 3:
 		if color_mask & (1 << i):
 			draw_rect(Rect2(i * corridor_width / 3.0, 902, corridor_width / 3.0, 7), Color(colours[i], 0.13 * (1.0 - _desaturation)))

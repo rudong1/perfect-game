@@ -22,6 +22,12 @@ var _scene_id := 0
 var _state: Node
 var _mirror: Node
 
+# Identify patched nodes by script resource identity rather than by path string:
+# renaming a script then fails loudly at parse time instead of silently dropping
+# its sound.
+const SLAB_SCRIPT = preload("res://scripts/mirror_slab.gd")
+const FINAL_MIRROR_SCRIPT = preload("res://scripts/final_mirror.gd")
+
 func _ready() -> void:
 	# A crystal's sound must finish while its CG pauses the room.
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -80,15 +86,12 @@ func _on_state_changed() -> void:
 
 func _on_node_added(node: Node) -> void:
 	var script: Script = node.get_script()
-	if script == null:
-		return
-	match script.resource_path:
-		"res://scripts/mirror_slab.gd":
-			node.transported.connect(_on_transported)
-		"res://scripts/final_mirror.gd":
-			# A resumed ending reconstructs an already broken mirror in _ready().
-			# Bind afterwards so loading that save stays quiet.
-			_bind_final_mirror.call_deferred(weakref(node))
+	if script == SLAB_SCRIPT:
+		node.transported.connect(_on_transported)
+	elif script == FINAL_MIRROR_SCRIPT:
+		# A resumed ending reconstructs an already broken mirror in _ready().
+		# Bind afterwards so loading that save stays quiet.
+		_bind_final_mirror.call_deferred(weakref(node))
 
 func _bind_final_mirror(reference: WeakRef) -> void:
 	var node: Node = reference.get_ref()

@@ -2,8 +2,6 @@ extends Area2D
 ## A room checkpoint. Touching it updates the respawn point and writes
 ## the run to user://mirror_save.cfg, so the title screen can continue later.
 
-signal activated
-
 @export var respawn_position := Vector2.ZERO
 
 var _active := false
@@ -31,7 +29,6 @@ func _on_body_entered(body: Node2D) -> void:
 		var stage: int = puzzle.solved_steps if puzzle != null else 0
 		_state.call("save_checkpoint", int(_state.get("current_level")), respawn_position, stage)
 	_set_active()
-	activated.emit()
 
 
 func _set_active() -> void:

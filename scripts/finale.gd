@@ -13,6 +13,7 @@ const SHADOW_START := Vector2(130, 900)
 const REVIVAL_CG = preload("res://assets/backgrounds/ending_revival.png")
 const EMBRACE_CG = preload("res://assets/backgrounds/ending_embrace.png")
 const DARKSKY_FRAMES = preload("res://assets/characters/darksky/darksky_frames.tres")
+const PALETTE = preload("res://scripts/palette.gd")
 const FUSION_DURATION := 4.2
 const EMBRACE_DURATION := 2.2
 const CONFESSION_BEATS := [
@@ -550,7 +551,7 @@ func _unhandled_input(event: InputEvent) -> void:
 func _draw() -> void:
 	if not is_instance_valid(player):
 		return
-	var colors := [Color("#FF637E"), Color("#59CFFF"), Color("#73E2A5")]
+	var colors := PALETTE.JOURNEY_COLORS
 	if phase == Phase.FUSION:
 		var t := clampf(_clock / FUSION_DURATION, 0, 1)
 		var destination := _memory_glass.position + Vector2(0, -125)

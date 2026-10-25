@@ -9,6 +9,7 @@ const CHECKPOINT = preload("res://scripts/checkpoint.gd")
 const SLAB = preload("res://scripts/mirror_slab.gd")
 const CIRCUIT = preload("res://scripts/prism_circuit.gd")
 const REGION_DRESSING = preload("res://scripts/region_dressing.gd")
+const PALETTE = preload("res://scripts/palette.gd")
 const WORLD_WIDTH := 1920.0
 var _palette: Dictionary
 var _show_plate_roles := true
@@ -117,7 +118,6 @@ func _plate(parent: Node2D, x: float, ceiling: bool, shadow: bool, caption: Stri
 	area.name = ("ShadowPlate" if shadow else "PlayerPlate") + str(int(x))
 	area.position = Vector2(x, 192 if ceiling else 888)
 	area.set_script(PLATE)
-	area.phase_independent = true
 	area.player_group = "mirror_self" if shadow else "player"
 	var collision := CollisionShape2D.new()
 	var shape := RectangleShape2D.new()
@@ -161,7 +161,7 @@ func _fragment(parent: Node2D, is_exit: bool) -> Area2D:
 	if is_exit:
 		_exit_visual(fragment)
 	parent.add_child(fragment)
-	fragment.hint = _hint(fragment, _palette.color_name + "碎片", Vector2(0, -110), _palette.collect_color)
+	fragment.hint = _hint(fragment, "出口" if is_exit else _palette.color_name + "碎片", Vector2(0, -110), _palette.collect_color)
 	return fragment
 
 func _checkpoint(parent: Node2D, x: float = 270.0) -> void:
@@ -228,7 +228,7 @@ func _light_step(parent: Node2D, slab: StaticBody2D, transit: bool, door_x: floa
 	circuit.set_script(CIRCUIT)
 	var locks: Array[Area2D] = []
 	for i in 3:
-		var seal := _plate(parent, [490.0, 990.0, 1370.0][i], i != 1, true, "影子封印 · " + ["红", "绿", "蓝"][i], 76, true, CIRCUIT.COLORS[i])
+		var seal := _plate(parent, [490.0, 990.0, 1370.0][i], i != 1, true, "影子封印 · " + PALETTE.CHANNEL_NAMES[i], 76, true, CIRCUIT.COLORS[i])
 		seal.latching = true
 		locks.append(seal)
 	circuit.shadow_locks = locks

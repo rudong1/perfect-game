@@ -1,8 +1,6 @@
 extends StaticBody2D
 ## A permanently locked door that opens when the reflection plate is pressed.
 
-signal opened
-
 var is_open := false
 
 var _collision: CollisionShape2D
@@ -25,7 +23,6 @@ func open() -> void:
 	_tween = create_tween()
 	_tween.tween_property(self, "modulate:a", 0.0, 0.3)
 	_tween.tween_callback(func() -> void: visible = false)
-	opened.emit()
 
 
 func close() -> void:

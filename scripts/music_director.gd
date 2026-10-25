@@ -44,7 +44,11 @@ func _ready() -> void:
 	_credits.name = "MusicCredits"
 	_credits.set_script(CREDITS)
 	add_child(_credits)
-	get_node("/root/SoundEffects").effect_played.connect(_on_effect_played)
+	var sound := get_node_or_null("/root/SoundEffects")
+	if sound != null:
+		sound.effect_played.connect(_on_effect_played)
+	else:
+		push_warning("MusicDirector: /root/SoundEffects missing; ducking disabled.")
 	get_tree().set_auto_accept_quit(false)
 	get_tree().root.close_requested.connect(_quit_safely)
 

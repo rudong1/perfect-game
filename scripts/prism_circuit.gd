@@ -2,7 +2,8 @@ extends Node2D
 ## Three geometric beams. M rotates only the mirror nearest the player's X;
 ## moving the slab changes occlusion, so orientation alone is insufficient.
 signal channels_changed(mask: int)
-const COLORS := [Color("#FF637E"), Color("#73E2A5"), Color("#59CFFF")]
+const PALETTE = preload("res://scripts/palette.gd")
+const COLORS := PALETTE.CHANNEL_COLORS
 var mirrors: Array[Vector2] = [Vector2(520, 410), Vector2(960, 530), Vector2(1400, 650)]
 var upward: Array[bool] = [false, false, false]
 var channel_mask := 0
@@ -26,7 +27,7 @@ func _ready() -> void:
 		var hint := _hint(mirrors[i], "", COLORS[i])
 		hint.world_offset = Vector2(0, 92 if get_node("/root/MirrorState").mirrored else -80)
 		_mirror_hints.append(hint)
-		_hint(Vector2(mirrors[i].x, 230), ["红", "绿", "蓝"][i] + "色接收器", COLORS[i])
+		_hint(Vector2(mirrors[i].x, 230), PALETTE.CHANNEL_NAMES[i] + "色接收器", COLORS[i])
 	get_node("/root/MirrorState").mirror_changed.connect(_on_flip)
 	get_node("/root/MirrorState").reset_requested.connect(reset)
 
@@ -67,7 +68,7 @@ func _physics_process(_delta: float) -> void:
 		return
 	select_nearest()
 	for i in 3:
-		_mirror_hints[i].text = ["红", "绿", "蓝"][i] + " · 反射镜" + (" · 按 M 转动" if selected == i else "")
+		_mirror_hints[i].text = PALETTE.CHANNEL_NAMES[i] + " · 反射镜" + (" · 按 M 转动" if selected == i else "")
 		_mirror_hints[i].world_offset = Vector2(0, 92 if get_node("/root/MirrorState").mirrored else -80)
 	update_beams()
 

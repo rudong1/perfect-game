@@ -11,6 +11,7 @@ const COLOR_COUNT := 3
 const SAVE_VERSION := 7
 const SAVE_PATH := "user://mirror_save.cfg"
 const GAME_TITLE := "镜尽余色"
+const PALETTE = preload("res://scripts/palette.gd")
 
 const LEVELS := [
 	{
@@ -18,7 +19,7 @@ const LEVELS := [
 		"objective": "折返、换面、再折返，完成三段双板接力，找到红色。",
 		"story_before": "「跟着我，{name}。从今天起，我就是你的倒影。」",
 		"color_name": "红色",
-		"collect_color": Color("#FF637E"),
+		"collect_color": PALETTE.RED,
 		"bg_top": Color("#08090C"),
 		"bg_bottom": Color("#1C1F26"),
 		"accent": Color("#C8CDD6"),
@@ -34,7 +35,7 @@ const LEVELS := [
 		"objective": "先解双板栅门，再校准两次镜印，完成去程与回程的穿镜。",
 		"story_before": "红光照暖了石墙，却仍穿过她的掌心。「也许，等颜色全部回来就好了。」",
 		"color_name": "蓝色",
-		"collect_color": Color("#59CFFF"),
+		"collect_color": PALETTE.BLUE,
 		"bg_top": Color("#1A070D"),
 		"bg_bottom": Color("#451824"),
 		"accent": Color("#E8556D"),
@@ -50,7 +51,7 @@ const LEVELS := [
 		"objective": "让影子开启三枚封印，带她穿镜接通三色，再以双板接力打开出口。",
 		"story_before": "「听说镜门只记得活人的颜色。」她低下头，又说：「我们先把它们找回来。」",
 		"color_name": "绿色",
-		"collect_color": Color("#73E2A5"),
+		"collect_color": PALETTE.GREEN,
 		"bg_top": Color("#04101F"),
 		"bg_bottom": Color("#103B5C"),
 		"accent": Color("#8CC8F5"),
@@ -66,7 +67,7 @@ const LEVELS := [
 		"objective": "从双板同行，到影印光闸与共同穿镜，最后再次和她一起打开出口。",
 		"story_before": "门后的光照亮了你。她也伸出手，掌心却仍旧是空白。",
 		"color_name": "",
-		"collect_color": Color("#73E2A5"),
+		"collect_color": PALETTE.GREEN,
 		"bg_top": Color("#0A1811"),
 		"bg_bottom": Color("#174C34"),
 		"accent": Color("#A8E8BE"),
@@ -81,7 +82,6 @@ const LEVELS := [
 
 var player_name := "无名"
 var current_level := 0
-var completed_levels := 0
 var collected_mask := 0
 var checkpoint_level := -1
 var checkpoint_stage := 0
@@ -102,7 +102,6 @@ func begin_game(name: String) -> void:
 	end_light_puzzle()
 	player_name = name.strip_edges() if not name.strip_edges().is_empty() else "无名"
 	current_level = 0
-	completed_levels = 0
 	collected_mask = 0
 	ending_reached = false
 	offered_mask = 0
@@ -137,7 +136,6 @@ func advance_level(skipped: bool = false) -> void:
 	if current_level >= MAX_LEVELS or (not skipped and current_level < COLOR_COUNT and not has_color(current_level)):
 		return
 	current_level += 1
-	completed_levels = current_level
 	has_checkpoint = false
 	checkpoint_level = -1
 	checkpoint_stage = 0
@@ -197,7 +195,6 @@ func load_from_disk() -> bool:
 		return false
 	player_name = str(config.get_value("game", "player_name", "无名"))
 	current_level = clampi(int(config.get_value("game", "current_level", 0)), 0, MAX_LEVELS)
-	completed_levels = current_level
 	# Old room layouts had different checkpoints. Retain journey progress but
 	# place the player at the new room's entrance when migrating an old save.
 	var version := int(config.get_value("game", "version", 1))
@@ -226,7 +223,7 @@ func load_from_disk() -> bool:
 
 func _save_game() -> void:
 	var config := ConfigFile.new()
-	for key in ["player_name", "current_level", "completed_levels", "collected_mask", "checkpoint_stage", "checkpoint_level", "checkpoint_position", "has_checkpoint", "ending_reached", "offered_mask", "darksky_revived"]:
+	for key in ["player_name", "current_level", "collected_mask", "checkpoint_stage", "checkpoint_level", "checkpoint_position", "has_checkpoint", "ending_reached", "offered_mask", "darksky_revived"]:
 		config.set_value("game", key, get(key))
 	config.set_value("game", "version", SAVE_VERSION)
 	var err := config.save(SAVE_PATH)
@@ -260,8 +257,7 @@ func restored_channel_count() -> int:
 
 func colored_rays() -> Array[Color]:
 	var rays: Array[Color] = []
-	var rgb := [Color("#FF637E"), Color("#73E2A5"), Color("#59CFFF")]
 	for i in 3:
 		if light_channels & (1 << i):
-			rays.append(rgb[i])
+			rays.append(PALETTE.CHANNEL_COLORS[i])
 	return rays
