@@ -7,8 +7,8 @@ Godot 4.7.2 标准版的 2D 镜像解谜游戏。少女与晚半拍的分身走�
 ## 运行
 
 1. 使用 Godot 4.7.2 标准版导入 `project.godot`，等待素材导入后按 F5。
-2. 输入名字并点击「踏入镜中」，在序章中按 Enter 或点击逐段阅读相遇的故事，再进入游戏。标题与序章使用女孩和倒影隔镜贴掌的哥特插画。
-3. 已有存档可在标题画面选择「继续旅程」。
+2. 在标题界面点击「踏入镜中」，右侧菜单会展开命名步骤：输入名字（可留空）后确认，再在序章中按 Enter 或点击逐段阅读相遇的故事，随后进入游戏。标题与序章使用女孩和倒影隔镜贴掌的哥特插画。
+3. 已有存档可在标题界面选择「继续旅程」；「退出游戏」或 Esc 直接离开。游戏中按 Esc 打开暂停菜单，可「继续游戏」或「保存并返回标题」。
 
 [标题实机画面](docs/title.png) · [序章实机画面](docs/opening.png)
 
@@ -27,6 +27,7 @@ Godot 4.7.2 标准版的 2D 镜像解谜游戏。少女与晚半拍的分身走�
 | M | 上下翻转画面与重力；光路关中同时转动最近一面反射镜 |
 | E | 靠近立镜时穿到镜面的另一侧 |
 | R | 重置当前房间 |
+| Esc | 暂停；暂停菜单可「继续游戏」或「保存并返回标题」 |
 
 ## 三种玩法与四个世界
 
@@ -85,11 +86,14 @@ Godot 4.7.2 标准版的 2D 镜像解谜游戏。少女与晚半拍的分身走�
 
 改名后沿用原有存档位置。入口及途中存档点、颜色收集和世界推进会写入 `user://mirror_save.cfg`。重生会清空穿镜、影子封印与光路状态。第 7 版存档分别记录赠色、复活与完成：追逐中退出回到追逐入口，赠色后继续融合，复活后继续团聚，拥抱与双人离场后才记录完整结局。继续游戏不会返还已赠出的颜色。旧版完成的复活存档会直接进入新版团聚与拥抱；旧版蓝绿关卡保留颜色及世界进度，并重置不适用的机关存档点。
 
+中途离开也安全：游戏中按 Esc 选择「保存并返回标题」，或直接关闭窗口（会自动保存），下次在标题界面选择「继续旅程」即可从当前世界最近的存档点恢复。
+
 使用标准版 Godot 在项目根目录执行：
 
 ```sh
 godot --headless --editor --import --quit
 XDG_DATA_HOME="$(mktemp -d)" godot --headless --fixed-fps 60 --path . --script res://tests/mirror_mechanics.gd
+XDG_DATA_HOME="$(mktemp -d)" godot --headless --fixed-fps 60 --path . --script res://tests/ui_flow.gd
 XDG_DATA_HOME="$(mktemp -d)" godot --headless --audio-driver Dummy --path . --script res://tests/audio_mix.gd
 XDG_DATA_HOME="$(mktemp -d)" godot --headless --audio-driver Dummy --path . --script res://tests/music_playback.gd
 ```
@@ -97,6 +101,8 @@ XDG_DATA_HOME="$(mktemp -d)" godot --headless --audio-driver Dummy --path . --sc
 音频混音测试按真实时间运行，录取 Master 输出，验证六段音效能实际发声、经过低音量推子，以及四段叠加时不会过响或削波；请勿为这项测试添加 `--fixed-fps`。
 
 音乐测试同样使用真实时间，验证场景切曲、CG 暂停续播、音乐鸣谢、双音源循环、碎镜让位，以及音乐与四段音效叠加后的实际输出。
+
+界面流程测试验证开始界面的两步式命名（先「踏入镜中」再填写姓名）、Esc 暂停、暂停菜单的保存并返回标题，以及关闭窗口时的自动存档。
 
 新美术包括 [复活 CG](assets/backgrounds/ending_revival.png)、[拥抱 CG](assets/backgrounds/ending_embrace.png)、[同行 CG](assets/backgrounds/ending_together.png)、[darksky 动作图](assets/characters/darksky/darksky_motion.png)、[镜前相遇](assets/backgrounds/mirror_hands.png)、[跑步摆臂](assets/characters/hero/hero_run.png)、[单手贴掌](assets/characters/hero/hero_reach.png)、[三色追逐远景](assets/backgrounds/chase_far.png)、[透明拱廊](assets/backgrounds/chase_near.png)、[哥特巨镜](assets/props/gothic_mirror.png) 和 [推镜立柱](assets/props/mirror_slab.png)。透明边距通过 AtlasTexture 裁取，原图保持完整。
 

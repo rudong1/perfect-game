@@ -4,7 +4,7 @@
 >
 > 配套文档：[README](../README.md)（玩法与素材说明）、[剧情稿](story.md)、[MCP 测试报告](mcp-test.md)（Godot-MCP 工具链实测）。
 >
-> 统计口径（2026-10-25 优化后）：GDScript 32 个文件 3616 行（含空行，`scripts/`）；测试 3 个文件 906 行；着色器 8 个文件 293 行；场景 6 个 `.tscn`。
+> 统计口径（2026-10-25 收尾）：GDScript 33 个文件 3801 行（含空行，`scripts/`）；测试 4 个文件 1006 行；着色器 8 个文件 293 行；场景 6 个 `.tscn`。
 
 ---
 
@@ -21,17 +21,17 @@
 | 存档 | `user://mirror_save.cfg`，ConfigFile，**第 7 版** | `scripts/game_state.gd:11-12` |
 | 入口脚本 | 标题 → 序章 → 四关循环 → 终幕 → 结局 | `scripts/title_screen.gd:40-45` 等 |
 
-**规模现状**（`scripts/` 内共 32 个 `.gd`）：
+**规模现状**（`scripts/` 内共 33 个 `.gd`）：
 
 | 模块 | 文件数 | 行数 | 说明 |
 | --- | --- | --- | --- |
-| 游戏脚本 | 32 | 3616 | 4 个 autoload + 5 个场景控制器 + 玩法组件 + `palette.gd` 常量 |
-| 测试 | 3 | 906 | `mirror_mechanics.gd` 753 行是主测试 |
+| 游戏脚本 | 33 | 3801 | 4 个 autoload + 5 个场景控制器 + 玩法组件 + `palette.gd` 常量 + `pause_menu.gd` |
+| 测试 | 4 | 1006 | `mirror_mechanics.gd` 753 行是主测试；`ui_flow.gd` 覆盖开始界面与中途退出 |
 | 着色器 | 8 | 293 | 7 个 `.gdshader` + 1 个共享 `.gdshaderinc` |
 | 场景 | 6 | — | `gameplay`/`player` 有真实节点树，`finale` 几乎全运行时生成 |
 | 工具 | 5 个 Python | — | `tools/` 离线美术/音频流水线 |
 
-> 注意：本地工作区的 `project.godot:15` 目前为 `PackedStringArray("4.7", "C#", "Mobile")`（未提交改动，HEAD 中无 `C#`），`project.godot:36-38` 还保留 `[dotnet]` 段——这是启用 Godot-MCP C# 插件留下的痕迹，GDScript 运行不依赖它。见 §13 R8。
+> 注意：`project.godot:15` 的 `PackedStringArray("4.7", "C#", "Mobile")` 与 `:36-38` 的 `[dotnet]` 段用于可选 Godot-MCP C# 编辑器插件；纯 GDScript 运行不依赖它们。见 §13 R8。
 
 ---
 
@@ -93,7 +93,7 @@ graph TD
 | 单例 | 脚本 | 职责 | 关键 API / 信号 |
 | --- | --- | --- | --- |
 | `MirrorState` | `scripts/mirror_state.gd`（52 行） | 唯一的世界镜像轴与翻转态，物理/HUD/渲染共用；M 键全局处理 | `mirror_changed(bool)`、`axis_changed(float)`、`reset_requested`；`TOGGLE_COOLDOWN_MS=180`(:8)、`axis_y=540`(:9)、`reflect_point()`(:19-20)、`toggle()`(:27-32)、`reset()`(:46-48) |
-| `GameState` | `scripts/game_state.gd`（263 行） | 关卡数据表、玩家名、颜色位掩码、存档、终幕/光路状态 | `changed`、`checkpoint_saved(Vector2)`(:6-7)；`SAVE_VERSION=7`(:11)；`LEVELS` 四关表(:16-81)；`collect_current_color()`(:127)、`advance_level()`(:135)、`save_checkpoint()`(:146)、`offer_colors()`(:163)、`revive_darksky()`(:174)、`load_from_disk()`(:192)、`_save_game()`(:224)、光路状态(:241-256) |
+| `GameState` | `scripts/game_state.gd`（282 行） | 关卡数据表、玩家名、颜色位掩码、存档、终幕/光路状态、中途退出保存 | `changed`、`checkpoint_saved(Vector2)`(:6-7)；`SAVE_VERSION=7`(:11)；`LEVELS` 四关表(:16-81)；`collect_current_color()`(:140)、`advance_level()`(:148)、`save_checkpoint()`(:159)、`offer_colors()`(:176)、`revive_darksky()`(:187)、`load_from_disk()`(:205)、`persist_run()`(:238)、`_save_game()`(:243)、`_on_close_requested()`(:104)、光路状态(:260-277) |
 | `SoundEffects` | `scripts/sound_effects.gd`（126 行） | 纯被动监听既有信号播放 4 声部限音效，不改玩法规则 | `effect_played(StringName)`；`MAX_VOICES=4`(:5)；6 段 CUES(:6-13)；SFX 总线(:43)；按 `GameState.changed` 新增颜色放音(:77-85)；`node_added` 按脚本资源身份绑定 slab/巨镜(:87-106) |
 | `MusicDirector` | `scripts/music_director.gd`（175 行） | 三首配乐、双播放器交叉淡化、循环、音效 duck、音乐鸣谢 | `TRACKS`(:5-9)、`LOOP_CROSSFADE=3.0`(:10)；按 `current_scene`/`finale.phase` 选曲(:55-100)；`transition_to()`(:112-139)；`_on_effect_played` duck(:141-151) |
 
@@ -107,10 +107,10 @@ graph TD
 | --- | --- |
 | `project.godot` | 引擎/输入/autoload/显示配置；`[editor_plugins] enabled=[]`（:40-42）默认关闭 MCP 插件 |
 | `scenes/` | 6 个场景：`ui/title_screen`、`opening/opening`、`gameplay/gameplay`、`player/player`、`finale/finale`、`ui/ending_screen` |
-| `scripts/` | 全部游戏逻辑（32 个 `.gd`），详见 §12 脚本索引 |
+| `scripts/` | 全部游戏逻辑（33 个 `.gd`），详见 §12 脚本索引 |
 | `shaders/` | 镜像/背景/镜门/追逐/阴影/区域薄雾/去琥珀色；`rgb_palette.gdshaderinc` 为共享 include |
 | `assets/` | `audio/`(3 ogg 音乐 + 6 wav 音效 + bus layout + 署名)、`backgrounds/`(28)、`characters/`(hero、darksky 的 AtlasTexture 帧)、`props/`、`ui/` |
-| `tests/` | 3 个 headless 测试，见 §13 |
+| `tests/` | 4 个 headless 测试，见 §11 |
 | `tools/` | 离线流水线：`build_hero_sheet.py`、`build_hero_animations.py`、`build_darksky_animations.py`、`build_sfx.py`、`prepare_music.py` |
 | `docs/` | `story.md` 剧情稿、18 张验证截图；`docs/.gdignore` 使截图不参与导入 |
 | `addons/godot_mcp/` | 外部 **Godot-MCP** C# 编辑器插件（Editor/Runtime/Icons + `plugin.cfg` + NuGet 依赖）；默认关闭，属开发工具链，不是游戏逻辑 |
@@ -127,20 +127,23 @@ graph TD
 ```mermaid
 stateDiagram-v2
     [*] --> TitleScreen
-    TitleScreen --> Opening: 「踏入镜中」begin_game()
+    TitleScreen --> Opening: 「踏入镜中」→ 命名 → begin_game()
     TitleScreen --> Finale: 「继续旅程」is_finale_pending()
     TitleScreen --> EndingScreen: 「继续旅程」is_game_complete()
     TitleScreen --> Gameplay: 「继续旅程」存档未通关
     Opening --> Gameplay: 4 段对白后淡出
     Gameplay --> Finale: 第 4 关出口/收集完毕
     Gameplay --> EndingScreen: 已完成(darksky_revived & ending_reached)
+    Gameplay --> TitleScreen: Esc 暂停 → 保存并返回标题
+    Finale --> TitleScreen: Esc 暂停 → 保存并返回标题
     Finale --> EndingScreen: DEPARTURE 相位 complete_journey()
     EndingScreen --> TitleScreen: 「再走一次」
 ```
 
-- 标题：`_begin()` → `GameState.begin_game()`（清档）→ opening；`_continue()` → `load_from_disk()` 后按 `is_finale_pending()` / `is_game_complete()` 三分支（`scripts/title_screen.gd:27-45`）。
+- 标题（开始界面）：菜单首屏只有「踏入镜中 / 继续旅程 / 退出游戏」；点击「踏入镜中」后才展开命名步骤（`_open_naming()`），确认后 `_commit_name()` 调 `GameState.begin_game()`（清档）→ opening；`_continue()` → `load_from_disk()` 后按 `is_finale_pending()` / `is_game_complete()` 三分支（`scripts/title_screen.gd:50-97`）。Esc 在命名步骤返回菜单，在菜单则退出游戏。
 - 序章：4 段 `STORY_LINES`（`scripts/opening.gd:5-10`）；进入时禁用镜像输入（:36-40），先等 0.7s 吞掉切场景残余输入（:64-65），最后淡出进 gameplay（:104-116）。
 - 关卡：`gameplay.gd:39-45` 在建关前先判断终幕/完成分支；否则 `LevelBuilder.build()` + spawn/checkpoint + 创建分身 + 绑定 `goal.collected`（:47-78）；收集/出口后 `advance_level()` 再 `load_level()`（:105-106）。R 键直接整关重建（:123-126）。
+- 暂停与中途退出：gameplay 与 finale 都带 `pause_menu.gd`（CanvasLayer 140），Esc（`ui_cancel`）打开；「继续游戏」恢复，「保存并返回标题」调用 `GameState.persist_run()` 写档后回开始界面。窗口关闭时 `GameState._on_close_requested()` 也会在 gameplay/finale 场景自动保存。
 - 终幕：10 相位 `THRESHOLD→CROSSOVER→BETRAYAL→CHASE→SHATTER→CONFESSION→FUSION→REUNION→EMBRACE→DEPARTURE`（`scripts/finale.gd:3`）；`DEPARTURE` 末尾 `complete_journey()` 后切结局（:535-536）；续玩时 `_ready` 按 `has_offered_colors()` 直接把玩家放到碎镜之后（:85-93）。
 - 结局：显示文案 + 「再走一次」回标题（`scripts/ending_screen.gd:22-23`）。
 
@@ -148,9 +151,9 @@ stateDiagram-v2
 
 | 场景 | 节点树要点 |
 | --- | --- |
-| `gameplay.tscn` | `Gameplay(Node2D, gameplay.gd)` → `Backdrop(CanvasLayer -10)/Base(ColorRect)`、`LevelRoot`（运行时填充）、`Camera`、`LevelBuilder(level_builder.gd)`、`Player(实例)`、`HUD(CanvasLayer 110, mirror_hud.gd)`、`CollectionCG(CanvasLayer 115, collection_cg.gd, process_mode=ALWAYS)` |
+| `gameplay.tscn` | `Gameplay(Node2D, gameplay.gd)` → `Backdrop(CanvasLayer -10)/Base(ColorRect)`、`LevelRoot`（运行时填充）、`Camera`、`LevelBuilder(level_builder.gd)`、`Player(实例)`、`HUD(CanvasLayer 110, mirror_hud.gd)`、`CollectionCG(CanvasLayer 115, collection_cg.gd, process_mode=ALWAYS)`、`PauseMenu(CanvasLayer 140, pause_menu.gd)` |
 | `player.tscn` | `Player(CharacterBody2D, groups=["player"], player.gd)` → `Sprite`、`Collision`(胶囊)、`ScreenMirror(CanvasLayer 100, screen_mirror.gd)` + `BackBufferCopy` + `Overlay`、`NameTagLayer(CanvasLayer 105, name_tag.gd)` |
-| `title_screen.tscn` | `Control`：Backdrop(mirror_hands.png)、Title/Subtitle/Story、NameEdit、Begin/Continue、ColorProgress |
+| `title_screen.tscn` | `Control`（开始界面）：Backdrop(mirror_hands.png)、Title/Subtitle/Story、`MenuPanel`(Heading/Rule、Begin、Confirm、NameLabel/NameEdit、Continue、Quit、Hint)、ColorProgress；命名控件默认隐藏 |
 | `opening.tscn` | `Control`：Backdrop、Photo 与 Gate 两张同图 Sprite（Gate 用 mirror_gate.gdshader 制造玻璃扰动）、Caption、Fade |
 | `finale.tscn` | 仅 `Node2D + finale.gd`，世界/演员/UI 全在 `_ready` 生成 |
 | `ending_screen.tscn` | `Control`：Backdrop(ending_together.png)、Title/Subtitle/Story、Restart、ColorProgress |
@@ -172,7 +175,7 @@ stateDiagram-v2
 | 影子封印 | `level_builder.gd:225-247` + `prism_circuit.gd:41-48` | 3 枚踏板 x=490/990/1370，上/下/上；`player_group="mirror_self"`、锁存；只有影子能点亮（本体无效），亮起后光源闸打开 |
 | 机关状态机 | `room_puzzle.gd` + `level_builder.gd:97-114` | `steps` 字典数组，5 种 `kind`：`plate`/`slab`/`prism`/`transit_prism`/`paired_prism(&transit_)`，判据见 :61-79；稳定 **0.08s** 才开门(:80-86)；光路中断会回退已解步数并关门(:52-58,87-89) |
 | 颜色收集与 CG | `color_fragment.gd`、`collection_cg.gd`、`gameplay.gd:80-106` | 只有 `player` 组能拾取；出口变体 `is_exit` 只开门不给色；CG 暂停整棵树（layer 115、`PROCESS_MODE_ALWAYS`）、最短观看 1.8s；先存档再放 CG，中断后续看同段 |
-| 存档 | `game_state.gd:192-231`、`checkpoint.gd` | ConfigFile v7，10 个字段；存档点触发时把 `RoomPuzzle.solved_steps` 作为 `stage` 一起写；老版本按 v4/v6/v7 规则迁移 |
+| 存档 | `game_state.gd:205-255`、`checkpoint.gd` | ConfigFile v7，10 个字段；存档点触发时把 `RoomPuzzle.solved_steps` 作为 `stage` 一起写；老版本按 v4/v6/v7 规则迁移；暂停菜单「保存并返回标题」与窗口关闭都会调用 `persist_run()` / `_on_close_requested()` 落盘 |
 | 调试键 | `gameplay.gd:108-121`、`finale.gd:541-543` | P 仅 debug build：直接获得本关颜色/碎镜跳段，走真实 CG+存档路径，按住不连发；R 重置本关 |
 
 ### 5.1 镜像三层的实现要点
@@ -249,6 +252,7 @@ stateDiagram-v2
 | `interact` | E | `mirror_slab.gd:57-62` |
 | `restart_room` | R | `gameplay.gd:123-126`、`finale.gd:544-546` |
 | `developer_skip` | P（仅 debug build） | `gameplay.gd:108-121`、`finale.gd:541-543` |
+| `ui_cancel` | Esc | `pause_menu.gd`（gameplay/finale 暂停）、`title_screen.gd`（命名步骤返回 / 菜单退出） |
 | 终幕对白 | `ui_accept`（Enter/空格） | `finale.gd` |
 
 > `interact/P/R/M` 用 `physical_keycode`，移动/跳跃类用 `keycode`，非 QWERTY 布局下行为不同（见 §13 R7）。
@@ -257,12 +261,13 @@ stateDiagram-v2
 
 ## 10. 数据与存档
 
-- **颜色**：`collected_mask` 位 0/1/2 = 红/蓝/绿（关卡顺序红→蓝→绿，`game_state.gd:22,38,54`）。第 4 关只有出口，`collect_current_color()` 会拒绝（:127-133）。RGB 色值统一来自 `scripts/palette.gd`。
-- **光路**：独立于颜色进度，`light_puzzle_active + light_channels`（3 bit），只有 `mask==7` 才开门（:241-256）；通道 bit 顺序为红/绿/蓝，同样来自 `palette.gd` 的 `CHANNEL_COLORS`。
-- **存档字段（v7）**：`player_name`、`current_level`、`collected_mask`、`checkpoint_stage/level/position`、`has_checkpoint`、`ending_reached`、`offered_mask`、`darksky_revived`（`game_state.gd:224-231`，共 10 项）。
-- **迁移规则**：v<4 丢弃 checkpoint；v<6 清早期 checkpoint、不认 `offered_mask`；v<7 蓝绿关 checkpoint 作废；旧完成档直接进入新版团聚（:198-219）。
-- **赠色语义**：`offer_colors()` 把 `collected_mask` 移到 `offered_mask` 并清空库存，防止重复花费；`complete_journey()` 必须 `darksky_revived`（:163-187）。
+- **颜色**：`collected_mask` 位 0/1/2 = 红/蓝/绿（关卡顺序红→蓝→绿，`game_state.gd:22,38,54`）。第 4 关只有出口，`collect_current_color()` 会拒绝（:140-146）。RGB 色值统一来自 `scripts/palette.gd`。
+- **光路**：独立于颜色进度，`light_puzzle_active + light_channels`（3 bit），只有 `mask==7` 才开门（:260-277）；通道 bit 顺序为红/绿/蓝，同样来自 `palette.gd` 的 `CHANNEL_COLORS`。
+- **存档字段（v7）**：`player_name`、`current_level`、`collected_mask`、`checkpoint_stage/level/position`、`has_checkpoint`、`ending_reached`、`offered_mask`、`darksky_revived`（`game_state.gd:243-250`，共 10 项）。
+- **迁移规则**：v<4 丢弃 checkpoint；v<6 清早期 checkpoint、不认 `offered_mask`；v<7 蓝绿关 checkpoint 作废；旧完成档直接进入新版团聚（:211-232）。
+- **赠色语义**：`offer_colors()` 把 `collected_mask` 移到 `offered_mask` 并清空库存，防止重复花费；`complete_journey()` 必须 `darksky_revived`（:176-200）。
 - **存档点**：第 0 关 x=270/1240，第 1 关 x=740/1300（`level_builder.gd:90-94`）；重生会清空穿镜/封印/光路状态。
+- **中途退出**：暂停菜单「保存并返回标题」→ `persist_run()`（仅 `run_active` 时写档）；关闭窗口 → `_on_close_requested()` 在 gameplay/finale 场景写档。继续旅程仍从当前世界最近的存档点恢复，避免把角色落回已关闭的门后。
 
 ---
 
@@ -273,6 +278,7 @@ stateDiagram-v2
 ```sh
 godot --headless --editor --import --quit
 XDG_DATA_HOME="$(mktemp -d)" godot --headless --fixed-fps 60 --path . --script res://tests/mirror_mechanics.gd
+XDG_DATA_HOME="$(mktemp -d)" godot --headless --fixed-fps 60 --path . --script res://tests/ui_flow.gd
 XDG_DATA_HOME="$(mktemp -d)" godot --headless --audio-driver Dummy --path . --script res://tests/audio_mix.gd
 XDG_DATA_HOME="$(mktemp -d)" godot --headless --audio-driver Dummy --path . --script res://tests/music_playback.gd
 ```
@@ -283,11 +289,12 @@ XDG_DATA_HOME="$(mktemp -d)" godot --headless --audio-driver Dummy --path . --sc
 
 | 文件 | 行数 | 覆盖 |
 | --- | --- | --- |
-| `tests/mirror_mechanics.gd` | 753 | 标题/序章、延迟与反重力、推镜姿态、真实输入通关、镜印与失败传送、光路遮挡/重新配合、影子封印、同渡穿镜、三色顺序、CG 暂停与续看、追逐重试、碎镜多边形、赠色/复活/拥抱、存档 v4/v6/v7 迁移、背景/绘制预算、P 跳关 |
+| `tests/mirror_mechanics.gd` | 753 | 标题/序章、两步命名、延迟与反重力、推镜姿态、真实输入通关、镜印与失败传送、光路遮挡/重新配合、影子封印、同渡穿镜、三色顺序、CG 暂停与续看、追逐重试、碎镜多边形、赠色/复活/拥抱、存档 v4/v6/v7 迁移、背景/绘制预算、P 跳关 |
+| `tests/ui_flow.gd` | 96 | 开始界面退出入口、命名步骤延迟展开、Esc 暂停/恢复、保存并返回标题、继续旅程、窗口关闭自动保存 |
 | `tests/audio_mix.gd` | 66 | 6 段音效实际发声、经 SFX 总线压低、四段叠加不削波（AudioEffectCapture 实测） |
 | `tests/music_playback.gd` | 87 | 切曲/交叉淡化/循环、CG 暂停续播、碎镜让位、音乐+音效总输出上限、鸣谢按钮 |
 
-三者均为 `extends SceneTree` 的自建断言（`check()` 累加失败、末尾 `quit(1)`），不是 GUT/gdUnit。
+四者均为 `extends SceneTree` 的自建断言（`check()` 累加失败、末尾 `quit(1)`），不是 GUT/gdUnit。
 
 ### 11.3 工具与 MCP
 
@@ -298,16 +305,17 @@ XDG_DATA_HOME="$(mktemp -d)" godot --headless --audio-driver Dummy --path . --sc
 
 ---
 
-## 12. 脚本索引（32 个）
+## 12. 脚本索引（33 个）
 
 | 脚本 | 职责 | 关键依赖 |
 | --- | --- | --- |
 | `mirror_state.gd` | 全局镜像轴/翻转/重置（autoload） | 被全部玩法/HUD/渲染订阅 |
-| `game_state.gd` | 关卡表/颜色/存档/终幕状态（autoload） | ConfigFile `user://mirror_save.cfg`、`palette.gd` |
+| `game_state.gd` | 关卡表/颜色/存档/终幕状态/中途退出保存（autoload） | ConfigFile `user://mirror_save.cfg`、`palette.gd` |
 | `palette.gd` | RGB 常量单一来源：`JOURNEY_COLORS`（红蓝绿）、`CHANNEL_COLORS`（红绿蓝）与名称 | 被 game_state / prism_circuit / level_builder / chase_backdrop / finale 引用 |
 | `sound_effects.gd` | 六段事件音效、4 声部限音（autoload） | `GameState.changed`、`MirrorState`、`node_added` |
 | `music_director.gd` | 三轨配乐、交叉淡化、duck、鸣谢（autoload） | `/root/SoundEffects`（防御式获取）、`finale.phase` |
-| `title_screen.gd` | 标题/命名/继续旅程分支 | `GameState` |
+| `title_screen.gd` | 开始界面：踏入镜中→命名步骤、继续旅程、退出游戏 | `GameState` |
+| `pause_menu.gd` | Esc 暂停覆盖层：继续游戏 / 保存并返回标题 | `GameState.persist_run()`、`tree.paused` |
 | `opening.gd` | 序章 4 段对白 + 镜门 ripple + 淡出 | `mirror_gate.gdshader`、`mirror_hands.png` |
 | `gameplay.gd` | 关卡总控：建关/spawn/checkpoint/CG/P/R/camera | `LevelBuilder`、`RoomPuzzle`、`GameState` |
 | `level_builder.gd` | 四关程序化工厂（节点/碰撞/自绘/机关/存档点） | 10 个组件脚本 + `GameState.LEVELS` |
@@ -339,7 +347,7 @@ XDG_DATA_HOME="$(mktemp -d)" godot --headless --audio-driver Dummy --path . --sc
 
 ## 13. 已知技术债与风险
 
-> 状态标记：✅ = 2026-10-25 已修复；◐ = 部分处理；❌ = 保留待办。本轮回归测试：mirror_mechanics **429** / audio_mix **13** / music_playback **18** checks，0 failures（mirror 的断言数随场景 Label 数量浮动，删除 HUD 教学文案后由 430 变为 429）。
+> 状态标记：✅ = 2026-10-25 已修复；◐ = 部分处理；❌ = 保留待办。本轮回归测试：mirror_mechanics **434** / ui_flow **17** / audio_mix **13** / music_playback **18** checks，0 failures（mirror 的断言数随场景 Label 数量浮动）。
 
 | # | 问题 | 证据 | 状态 / 建议 |
 | --- | --- | --- | --- |
@@ -374,6 +382,6 @@ XDG_DATA_HOME="$(mktemp -d)" godot --headless --audio-driver Dummy --path . --sc
 
 **存档升级**：递增 `SAVE_VERSION`（`game_state.gd:11`），在 `load_from_disk()` 里加版本分支（:198-219 的写法），补迁移测试。
 
-**改动后验证清单**：①`godot --headless --editor --import --quit` 导入无报错；②三个 headless 测试全绿（429 / 13 / 18 checks）；③`tests/mirror_mechanics.gd` 中的真实输入通关用例；④`git diff` 无意外文件；⑤若改了 autoload/场景路径，跑一次标题→序章→第一关→终幕入口的冒烟流程。
+**改动后验证清单**：①`godot --headless --editor --import --quit` 导入无报错；②四个 headless 测试全绿（434 / 17 / 13 / 18 checks）；③`tests/mirror_mechanics.gd` 中的真实输入通关用例；④`git diff` 无意外文件；⑤若改了 autoload/场景路径，跑一次标题→命名→序章→第一关→终幕入口的冒烟流程。
 
 **使用 Godot-MCP 做编辑器内验证**：仓库已提供 `.env.example`（复制为 `.env`，已被 gitignore），在编辑器启用 `addons/godot_mcp/plugin.cfg`（`project.godot:40-42`）后启动即可连上 26475，无需额外环境变量；随后用 `.claude/skills/` 中的 `godot-cli` 命令调用工具。连接与故障排查见 [MCP 测试报告](mcp-test.md) §11。
