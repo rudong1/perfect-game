@@ -4,7 +4,7 @@
 >
 > 配套文档：[README](../README.md)（玩法与素材说明）、[剧情稿](story.md)、[MCP 测试报告](mcp-test.md)（Godot-MCP 工具链实测）。
 >
-> 统计口径（2026-10-25 收尾）：GDScript 33 个文件 3801 行（含空行，`scripts/`）；测试 4 个文件 1006 行；着色器 8 个文件 293 行；场景 6 个 `.tscn`。
+> 统计口径（2026-10-25 收尾）：GDScript 33 个文件 3965 行（含空行，`scripts/`）；测试 4 个文件 1033 行；着色器 9 个文件 322 行；场景 6 个 `.tscn`。
 
 ---
 
@@ -25,9 +25,9 @@
 
 | 模块 | 文件数 | 行数 | 说明 |
 | --- | --- | --- | --- |
-| 游戏脚本 | 33 | 3801 | 4 个 autoload + 5 个场景控制器 + 玩法组件 + `palette.gd` 常量 + `pause_menu.gd` |
-| 测试 | 4 | 1006 | `mirror_mechanics.gd` 753 行是主测试；`ui_flow.gd` 覆盖开始界面与中途退出 |
-| 着色器 | 8 | 293 | 7 个 `.gdshader` + 1 个共享 `.gdshaderinc` |
+| 游戏脚本 | 33 | 3965 | 4 个 autoload + 5 个场景控制器 + 玩法组件 + `palette.gd` 常量 + `pause_menu.gd` |
+| 测试 | 4 | 1033 | `mirror_mechanics.gd` 779 行是主测试；`ui_flow.gd` 覆盖开始界面与中途退出 |
+| 着色器 | 9 | 322 | 8 个 `.gdshader` + 1 个共享 `.gdshaderinc`（新增封镜异象） |
 | 场景 | 6 | — | `gameplay`/`player` 有真实节点树，`finale` 几乎全运行时生成 |
 | 工具 | 5 个 Python | — | `tools/` 离线美术/音频流水线 |
 
@@ -93,7 +93,7 @@ graph TD
 | 单例 | 脚本 | 职责 | 关键 API / 信号 |
 | --- | --- | --- | --- |
 | `MirrorState` | `scripts/mirror_state.gd`（52 行） | 唯一的世界镜像轴与翻转态，物理/HUD/渲染共用；M 键全局处理 | `mirror_changed(bool)`、`axis_changed(float)`、`reset_requested`；`TOGGLE_COOLDOWN_MS=180`(:8)、`axis_y=540`(:9)、`reflect_point()`(:19-20)、`toggle()`(:27-32)、`reset()`(:46-48) |
-| `GameState` | `scripts/game_state.gd`（282 行） | 关卡数据表、玩家名、颜色位掩码、存档、终幕/光路状态、中途退出保存 | `changed`、`checkpoint_saved(Vector2)`(:6-7)；`SAVE_VERSION=7`(:11)；`LEVELS` 四关表(:16-81)；`collect_current_color()`(:140)、`advance_level()`(:148)、`save_checkpoint()`(:159)、`offer_colors()`(:176)、`revive_darksky()`(:187)、`load_from_disk()`(:205)、`persist_run()`(:238)、`_save_game()`(:243)、`_on_close_requested()`(:104)、光路状态(:260-277) |
+| `GameState` | `scripts/game_state.gd`（311 行） | 关卡数据表、玩家名、颜色位掩码、存档、终幕/光路状态、封镜进度、中途退出保存 | `changed`、`checkpoint_saved(Vector2)`(:6-7)；`SAVE_VERSION=8`(:11)；`LEVELS` 四关表(:16-81)；`collect_current_color()`(:146)、`advance_level()`(:154)、`save_checkpoint()`(:165)、`offer_colors()`(:182)、`revive_darksky()`(:193)、`load_from_disk()`(:211)、`persist_run()`(:248)、`seal_mirror()`(:253)、`open_mirror()`(:259)、`is_sealed_save()`(:265)、`_save_game()`(:272)、`_on_close_requested()`(:108)、光路状态(:289-306) |
 | `SoundEffects` | `scripts/sound_effects.gd`（126 行） | 纯被动监听既有信号播放 4 声部限音效，不改玩法规则 | `effect_played(StringName)`；`MAX_VOICES=4`(:5)；6 段 CUES(:6-13)；SFX 总线(:43)；按 `GameState.changed` 新增颜色放音(:77-85)；`node_added` 按脚本资源身份绑定 slab/巨镜(:87-106) |
 | `MusicDirector` | `scripts/music_director.gd`（175 行） | 三首配乐、双播放器交叉淡化、循环、音效 duck、音乐鸣谢 | `TRACKS`(:5-9)、`LOOP_CROSSFADE=3.0`(:10)；按 `current_scene`/`finale.phase` 选曲(:55-100)；`transition_to()`(:112-139)；`_on_effect_played` duck(:141-151) |
 
@@ -138,15 +138,18 @@ stateDiagram-v2
     Gameplay --> EndingScreen: 已完成(darksky_revived & ending_reached)
     Gameplay --> TitleScreen: Esc 暂停 → 保存并返回标题
     Finale --> TitleScreen: Esc 暂停 → 保存并返回标题
+    Finale --> TitleScreen: 揭示读完 → 镜面封闭（强制回标题）
+    TitleScreen --> Finale: 封镜时按住 M 约 1.5s → CROSSOVER 续演
     Finale --> EndingScreen: DEPARTURE 相位 complete_journey()
     EndingScreen --> TitleScreen: 「再走一次」
 ```
 
-- 标题（开始界面）：菜单首屏只有「踏入镜中 / 继续旅程 / 退出游戏」；点击「踏入镜中」后才展开命名步骤（`_open_naming()`），确认后 `_commit_name()` 调 `GameState.begin_game()`（清档）→ opening；`_continue()` → `load_from_disk()` 后按 `is_finale_pending()` / `is_game_complete()` 三分支（`scripts/title_screen.gd:54-111`）。命名提示默认「为第一位坠落的少女命名」；输入 `darksky`（忽略大小写、去首尾空格）时切换为「为你自己命名」的彩蛋提示，改成其他名字即恢复。Esc 在命名步骤返回菜单，在菜单则退出游戏。
+- 标题（开始界面）：菜单首屏只有「踏入镜中 / 继续旅程 / 退出游戏」；点击「踏入镜中」后才展开命名步骤（`_open_naming()`），确认后 `_commit_name()` 调 `GameState.begin_game()`（清档）→ opening；`_continue()` → `load_from_disk()` 后按 `is_finale_pending()` / `is_game_complete()` 三分支（`scripts/title_screen.gd:150-209`）。命名提示默认「为第一位坠落的少女命名」；输入 `darksky`（忽略大小写、去首尾空格）时切换为「为你自己命名」的彩蛋提示，改成其他名字即恢复。Esc 在命名步骤返回菜单，在菜单则退出游戏。
 - 序章：4 段 `STORY_LINES`（`scripts/opening.gd:5-10`）；进入时禁用镜像输入（:36-40），先等 0.7s 吞掉切场景残余输入（:64-65），最后淡出进 gameplay（:104-116）。
 - 关卡：`gameplay.gd:39-45` 在建关前先判断终幕/完成分支；否则 `LevelBuilder.build()` + spawn/checkpoint + 创建分身 + 绑定 `goal.collected`（:47-78）；收集/出口后 `advance_level()` 再 `load_level()`（:105-106）。R 键直接整关重建（:123-126）。
 - 暂停与中途退出：gameplay 与 finale 都带 `pause_menu.gd`（CanvasLayer 140），Esc（`ui_cancel`）打开；「继续游戏」恢复，「保存并返回标题」调用 `GameState.persist_run()` 写档后回开始界面。窗口关闭时 `GameState._on_close_requested()` 也会在 gameplay/finale 场景自动保存。
-- 终幕：10 相位 `THRESHOLD→CROSSOVER→BETRAYAL→CHASE→SHATTER→CONFESSION→FUSION→REUNION→EMBRACE→DEPARTURE`（`scripts/finale.gd:3`）；`DEPARTURE` 末尾 `complete_journey()` 后切结局（:535-536）；续玩时 `_ready` 按 `has_offered_colors()` 直接把玩家放到碎镜之后（:85-93）。
+- 封镜与重入：终幕揭示读完后 `_seal_mirror_to_title()` 调 `GameState.seal_mirror()`（写 `mirror_sealed/revelation_done`）并强制回标题；标题把「踏入镜中 / 继续旅程」置灰上锁（🔒）并显示浅红提示「你需要找到办法进入镜面」，此时按住 M 约 **1.5s** 会叠加克制的画面抖动与偏红变色异象（`shaders/mirror_hollow.gdshader`），充满后 `open_mirror()` 并回到终幕的 CROSSOVER 继续（`finale.gd:338-383`、`title_screen.gd:59-132`）。
+- 终幕：10 相位 `THRESHOLD→CROSSOVER→BETRAYAL→CHASE→SHATTER→CONFESSION→FUSION→REUNION→EMBRACE→DEPARTURE`（`scripts/finale.gd:3`）；`DEPARTURE` 末尾 `complete_journey()` 后切结局（:557-559）；续玩时 `_ready` 按 `has_offered_colors()` / `revelation_done` 决定从碎镜后、CROSSOVER 或揭示开头继续（:85-107）。
 - 结局：显示文案 + 「再走一次」回标题（`scripts/ending_screen.gd:22-23`）。
 
 ### 4.2 场景树
@@ -177,8 +180,9 @@ stateDiagram-v2
 | 影子封印 | `level_builder.gd:225-247` + `prism_circuit.gd:41-48` | 3 枚踏板 x=490/990/1370，上/下/上；`player_group="mirror_self"`、锁存；只有影子能点亮（本体无效），亮起后光源闸打开 |
 | 机关状态机 | `room_puzzle.gd` + `level_builder.gd:97-114` | `steps` 字典数组，5 种 `kind`：`plate`/`slab`/`prism`/`transit_prism`/`paired_prism(&transit_)`，判据见 :61-79；稳定 **0.08s** 才开门(:80-86)；光路中断会回退已解步数并关门(:52-58,87-89) |
 | 颜色收集与 CG | `color_fragment.gd`、`collection_cg.gd`、`gameplay.gd:80-106` | 只有 `player` 组能拾取；出口变体 `is_exit` 只开门不给色；CG 暂停整棵树（layer 115、`PROCESS_MODE_ALWAYS`）、最短观看 1.8s；先存档再放 CG，中断后续看同段 |
-| 存档 | `game_state.gd:205-255`、`checkpoint.gd` | ConfigFile v7，10 个字段；存档点触发时把 `RoomPuzzle.solved_steps` 作为 `stage` 一起写；老版本按 v4/v6/v7 规则迁移；暂停菜单「保存并返回标题」与窗口关闭都会调用 `persist_run()` / `_on_close_requested()` 落盘 |
-| 调试键 | `gameplay.gd:108-121`、`finale.gd:541-543` | P 仅 debug build：直接获得本关颜色/碎镜跳段，走真实 CG+存档路径，按住不连发；R 重置本关 |
+| 存档 | `game_state.gd:211-289`、`checkpoint.gd` | ConfigFile v8，12 个字段；存档点触发时把 `RoomPuzzle.solved_steps` 作为 `stage` 一起写；老版本按 v4/v6/v7 规则迁移；暂停菜单「保存并返回标题」与窗口关闭都会调用 `persist_run()` / `_on_close_requested()` 落盘；封镜时写 `mirror_sealed`，重入时写 `revelation_done` |
+| 封镜与重入 | `finale.gd:338-383`、`title_screen.gd:59-132`、`shaders/mirror_hollow.gdshader` | 揭示读完 → `seal_mirror()` → 标题两个入口上锁 + 浅红提示；按住 M 1.5s（amount 0→0.85 的抖动/偏红异象）→ `open_mirror()` → 终幕从 CROSSOVER 继续 |
+| 调试键 | `gameplay.gd:108-121`、`finale.gd:568-570` | P 仅 debug build：直接获得本关颜色/碎镜跳段，走真实 CG+存档路径，按住不连发；R 重置本关（:571-573） |
 
 ### 5.1 镜像三层的实现要点
 
@@ -232,6 +236,7 @@ stateDiagram-v2
 | `screen_mirror.gdshader` | 全屏抓屏后沿屏幕轴镜像 | `screen_mirror.gd` |
 | `level_backdrop.gdshader`（128 行，最大） | 程序化哥特背景：fbm 石材/柱廊/玫瑰窗光束/尘埃/雾/暗角/饱和度，并有 `use_scene_texture` 分支画四张 `church_*.png` | `gameplay.gd:49-60` |
 | `mirror_gate.gdshader` | 序章镜门：拱形遮罩 + 正弦 ripple 只扰动玻璃区 | `opening.tscn` |
+| `mirror_hollow.gdshader` | 封镜异象：克制的画面抖动 + 色差 + 浅红边缘 | `title_screen.gd` 封镜状态 |
 | `chase_spectrum.gdshader` | 追逐走廊按 `color_mask` 保留颜色家族 + 三束彩光 + 去饱和 | `chase_backdrop.gd` |
 | `shadow_tint.gdshader` | 分身/终幕影子的烟尘质感（alpha ≤0.62） | `mirror_self.gd`、`finale.gd` |
 | `restricted_art.gdshader` | 插画去琥珀/单色化 + 顶点染色 | 标题/结局/序章/收集 CG/立镜/巨镜 |
@@ -250,10 +255,10 @@ stateDiagram-v2
 | `jump` | W/↑ | `player.gd` |
 | `crouch` | S/↓ | `player.gd` |
 | `sprint` | Shift | `player.gd` |
-| `mirror` | M | `mirror_state.gd:22-25`（全局） |
+| `mirror` | M | `mirror_state.gd:22-25`（全局；标题界面封镜时改为按住 1.5s 重入终幕，见 `title_screen.gd:59-132`） |
 | `interact` | E | `mirror_slab.gd:57-62` |
-| `restart_room` | R | `gameplay.gd:123-126`、`finale.gd:544-546` |
-| `developer_skip` | P（仅 debug build） | `gameplay.gd:108-121`、`finale.gd:541-543` |
+| `restart_room` | R | `gameplay.gd:123-126`、`finale.gd:571-573` |
+| `developer_skip` | P（仅 debug build） | `gameplay.gd:108-121`、`finale.gd:568-570` |
 | `ui_cancel` | Esc | `pause_menu.gd`（gameplay/finale 暂停）、`title_screen.gd`（命名步骤返回 / 菜单退出） |
 | 终幕对白 | `ui_accept`（Enter/空格） | `finale.gd` |
 
@@ -263,13 +268,14 @@ stateDiagram-v2
 
 ## 10. 数据与存档
 
-- **颜色**：`collected_mask` 位 0/1/2 = 红/蓝/绿（关卡顺序红→蓝→绿，`game_state.gd:22,38,54`）。第 4 关只有出口，`collect_current_color()` 会拒绝（:140-146）。RGB 色值统一来自 `scripts/palette.gd`。
-- **光路**：独立于颜色进度，`light_puzzle_active + light_channels`（3 bit），只有 `mask==7` 才开门（:260-277）；通道 bit 顺序为红/绿/蓝，同样来自 `palette.gd` 的 `CHANNEL_COLORS`。
-- **存档字段（v7）**：`player_name`、`current_level`、`collected_mask`、`checkpoint_stage/level/position`、`has_checkpoint`、`ending_reached`、`offered_mask`、`darksky_revived`（`game_state.gd:243-250`，共 10 项）。
-- **迁移规则**：v<4 丢弃 checkpoint；v<6 清早期 checkpoint、不认 `offered_mask`；v<7 蓝绿关 checkpoint 作废；旧完成档直接进入新版团聚（:211-232）。
-- **赠色语义**：`offer_colors()` 把 `collected_mask` 移到 `offered_mask` 并清空库存，防止重复花费；`complete_journey()` 必须 `darksky_revived`（:176-200）。
+- **颜色**：`collected_mask` 位 0/1/2 = 红/蓝/绿（关卡顺序红→蓝→绿，`game_state.gd:22,38,54`）。第 4 关只有出口，`collect_current_color()` 会拒绝（:146-152）。RGB 色值统一来自 `scripts/palette.gd`。
+- **光路**：独立于颜色进度，`light_puzzle_active + light_channels`（3 bit），只有 `mask==7` 才开门（:289-306）；通道 bit 顺序为红/绿/蓝，同样来自 `palette.gd` 的 `CHANNEL_COLORS`。
+- **存档字段（v8）**：`player_name`、`current_level`、`collected_mask`、`checkpoint_stage/level/position`、`has_checkpoint`、`ending_reached`、`offered_mask`、`darksky_revived`、`mirror_sealed`、`revelation_done`（`game_state.gd:272-280`，共 12 项）。
+- **迁移规则**：v<4 丢弃 checkpoint；v<6 清早期 checkpoint、不认 `offered_mask`；v<7 蓝绿关 checkpoint 作废；旧完成档（v7）仍按 v7 语义读取 `ending_reached`（判定已从与 `SAVE_VERSION` 绑定改为显式 `>= 7`）；v8 之前没有封镜字段，默认未封镜（:217-243）。
+- **赠色语义**：`offer_colors()` 把 `collected_mask` 移到 `offered_mask` 并清空库存，防止重复花费；`complete_journey()` 必须 `darksky_revived`（:182-206）。
 - **存档点**：第 0 关 x=270/1240，第 1 关 x=740/1300（`level_builder.gd:90-94`）；重生会清空穿镜/封印/光路状态。
 - **中途退出**：暂停菜单「保存并返回标题」→ `persist_run()`（仅 `run_active` 时写档）；关闭窗口 → `_on_close_requested()` 在 gameplay/finale 场景写档。继续旅程仍从当前世界最近的存档点恢复，避免把角色落回已关闭的门后。
+- **封镜存档**：揭示读完写 `mirror_sealed=true`；此时读档不会进入终幕，而是让标题进入上锁状态；按住 M 重入后写 `mirror_sealed=false, revelation_done=true`，终幕从 CROSSOVER 续演，不再重读揭示。
 
 ---
 
@@ -291,8 +297,8 @@ XDG_DATA_HOME="$(mktemp -d)" godot --headless --audio-driver Dummy --path . --sc
 
 | 文件 | 行数 | 覆盖 |
 | --- | --- | --- |
-| `tests/mirror_mechanics.gd` | 753 | 标题/序章、两步命名、延迟与反重力、推镜姿态、真实输入通关、镜印与失败传送、光路遮挡/重新配合、影子封印、同渡穿镜、三色顺序、CG 暂停与续看、追逐重试、碎镜多边形、赠色/复活/拥抱、存档 v4/v6/v7 迁移、背景/绘制预算、P 跳关 |
-| `tests/ui_flow.gd` | 96 | 开始界面退出入口、命名步骤延迟展开、Esc 暂停/恢复、保存并返回标题、继续旅程、窗口关闭自动保存 |
+| `tests/mirror_mechanics.gd` | 779 | 标题/序章、两步命名、延迟与反重力、推镜姿态、真实输入通关、镜印与失败传送、光路遮挡/重新配合、影子封印、同渡穿镜、三色顺序、CG 暂停与续看、追逐重试、碎镜多边形、赠色/复活/拥抱、存档 v4/v6/v7 迁移、封镜/按压 M 重入、背景/绘制预算、P 跳关 |
+| `tests/ui_flow.gd` | 101 | 开始界面退出入口、命名步骤延迟展开、Esc 暂停/恢复、保存并返回标题、继续旅程、窗口关闭自动保存 |
 | `tests/audio_mix.gd` | 66 | 6 段音效实际发声、经 SFX 总线压低、四段叠加不削波（AudioEffectCapture 实测） |
 | `tests/music_playback.gd` | 87 | 切曲/交叉淡化/循环、CG 暂停续播、碎镜让位、音乐+音效总输出上限、鸣谢按钮 |
 
@@ -312,11 +318,11 @@ XDG_DATA_HOME="$(mktemp -d)" godot --headless --audio-driver Dummy --path . --sc
 | 脚本 | 职责 | 关键依赖 |
 | --- | --- | --- |
 | `mirror_state.gd` | 全局镜像轴/翻转/重置（autoload） | 被全部玩法/HUD/渲染订阅 |
-| `game_state.gd` | 关卡表/颜色/存档/终幕状态/中途退出保存（autoload） | ConfigFile `user://mirror_save.cfg`、`palette.gd` |
+| `game_state.gd` | 关卡表/颜色/存档/终幕状态/封镜进度/中途退出保存（autoload） | ConfigFile `user://mirror_save.cfg`、`palette.gd` |
 | `palette.gd` | RGB 常量单一来源：`JOURNEY_COLORS`（红蓝绿）、`CHANNEL_COLORS`（红绿蓝）与名称 | 被 game_state / prism_circuit / level_builder / chase_backdrop / finale 引用 |
 | `sound_effects.gd` | 六段事件音效、4 声部限音（autoload） | `GameState.changed`、`MirrorState`、`node_added` |
 | `music_director.gd` | 三轨配乐、交叉淡化、duck、鸣谢（autoload） | `/root/SoundEffects`（防御式获取）、`finale.phase` |
-| `title_screen.gd` | 开始界面：踏入镜中→命名步骤、继续旅程、退出游戏 | `GameState` |
+| `title_screen.gd` | 开始界面：踏入镜中→命名步骤、继续旅程、退出游戏；封镜时两个入口上锁 + 按住 M 重入 | `GameState`、`shaders/mirror_hollow.gdshader` |
 | `pause_menu.gd` | Esc 暂停覆盖层：继续游戏 / 保存并返回标题 | `GameState.persist_run()`、`tree.paused` |
 | `opening.gd` | 序章 4 段对白 + 镜门 ripple + 淡出 | `mirror_gate.gdshader`、`mirror_hands.png` |
 | `gameplay.gd` | 关卡总控：建关/spawn/checkpoint/CG/P/R/camera | `LevelBuilder`、`RoomPuzzle`、`GameState` |
@@ -349,7 +355,7 @@ XDG_DATA_HOME="$(mktemp -d)" godot --headless --audio-driver Dummy --path . --sc
 
 ## 13. 已知技术债与风险
 
-> 状态标记：✅ = 2026-10-25 已修复；◐ = 部分处理；❌ = 保留待办。本轮回归测试：mirror_mechanics **434** / ui_flow **17** / audio_mix **13** / music_playback **18** checks，0 failures（mirror 的断言数随场景 Label 数量浮动）。
+> 状态标记：✅ = 2026-10-25 已修复；◐ = 部分处理；❌ = 保留待办。本轮回归测试：mirror_mechanics **439** / ui_flow **20** / audio_mix **13** / music_playback **18** checks，0 failures（mirror 的断言数随场景 Label 数量浮动）。
 
 | # | 问题 | 证据 | 状态 / 建议 |
 | --- | --- | --- | --- |
@@ -384,6 +390,6 @@ XDG_DATA_HOME="$(mktemp -d)" godot --headless --audio-driver Dummy --path . --sc
 
 **存档升级**：递增 `SAVE_VERSION`（`game_state.gd:11`），在 `load_from_disk()` 里加版本分支（:198-219 的写法），补迁移测试。
 
-**改动后验证清单**：①`godot --headless --editor --import --quit` 导入无报错；②四个 headless 测试全绿（434 / 17 / 13 / 18 checks）；③`tests/mirror_mechanics.gd` 中的真实输入通关用例；④`git diff` 无意外文件；⑤若改了 autoload/场景路径，跑一次标题→命名→序章→第一关→终幕入口的冒烟流程。
+**改动后验证清单**：①`godot --headless --editor --import --quit` 导入无报错；②四个 headless 测试全绿（439 / 20 / 13 / 18 checks）；③`tests/mirror_mechanics.gd` 中的真实输入通关用例（含封镜与按住 M 重入）；④`git diff` 无意外文件；⑤若改了 autoload/场景路径，跑一次标题→命名→序章→第一关→终幕→封镜→重入的冒烟流程。
 
 **使用 Godot-MCP 做编辑器内验证**：仓库已提供 `.env.example`（复制为 `.env`，已被 gitignore），在编辑器启用 `addons/godot_mcp/plugin.cfg`（`project.godot:40-42`）后启动即可连上 26475，无需额外环境变量；随后用 `.claude/skills/` 中的 `godot-cli` 命令调用工具。连接与故障排查见 [MCP 测试报告](mcp-test.md) §11。
