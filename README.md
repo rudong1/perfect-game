@@ -101,3 +101,10 @@ XDG_DATA_HOME="$(mktemp -d)" godot --headless --audio-driver Dummy --path . --sc
 新美术包括 [复活 CG](assets/backgrounds/ending_revival.png)、[拥抱 CG](assets/backgrounds/ending_embrace.png)、[同行 CG](assets/backgrounds/ending_together.png)、[darksky 动作图](assets/characters/darksky/darksky_motion.png)、[镜前相遇](assets/backgrounds/mirror_hands.png)、[跑步摆臂](assets/characters/hero/hero_run.png)、[单手贴掌](assets/characters/hero/hero_reach.png)、[三色追逐远景](assets/backgrounds/chase_far.png)、[透明拱廊](assets/backgrounds/chase_near.png)、[哥特巨镜](assets/props/gothic_mirror.png) 和 [推镜立柱](assets/props/mirror_slab.png)。透明边距通过 AtlasTexture 裁取，原图保持完整。
 
 测试覆盖序章对话与命名、分身延迟、镜像重力、安全重定位、翻转文字、推行姿态、前两关实际输入通关、后两关影子封印与同渡穿镜、活光出口双板、光束遮挡与重新配合、三色顺序、独立收集 CG 的暂停与确认及中断后续播、建筑景深与三色光照、追逐重试、巨镜纹理碎裂、三色真实赠予、独立角色复活与拥抱 CG，以及新旧存档在赠色、复活、结束各阶段的继续流程。背景、角色、字体与界面还通过实际 OpenGL 渲染截图检查。
+
+## 开发文档
+
+- [项目框架说明](docs/framework.md)：分层架构、autoload 单例、场景流转、核心玩法、脚本索引与已知技术债。
+- [MCP 测试报告](docs/mcp-test.md)：Godot-MCP 配置与 26 项测试矩阵、端口分裂根因，以及已落地的 `.env` 修复与复测结果。
+
+Godot-MCP 是可选开发工具链，游戏本身不依赖它。仓库用 `.env.example` 保存编辑器连接模板：复制为 `.env`（已被 `.gitignore` 忽略）并在编辑器启用 `addons/godot_mcp/plugin.cfg` 后，编辑器会连上本地 `gamedev-mcp-server`（`http://localhost:26475`），无需再手工设置环境变量。
