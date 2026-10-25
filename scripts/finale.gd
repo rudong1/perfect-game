@@ -358,7 +358,7 @@ func _seal_mirror_to_title() -> void:
 	# must find a way back in from the locked start screen.
 	_next.visible = false
 	_dialogue.visible = false
-	_objective.text = "镜门在你面前合上。你需要想办法，再次进入镜面。"
+	_objective.text = "镜门在你面前合上。你需要按键，再次进入镜面。"
 	_state.call("seal_mirror")
 	_veil.color.a = 0.0
 	var fade := create_tween()

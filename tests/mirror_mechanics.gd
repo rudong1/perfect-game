@@ -272,7 +272,7 @@ func prepare_chase(scene: Node2D) -> void:
 	check(current_scene.scene_file_path.ends_with("title_screen.tscn") and state.mirror_sealed, "the revelation forces the player back to the sealed start screen")
 	var sealed: Control = current_scene
 	check(sealed.begin_button.disabled and sealed.continue_button.disabled, "start and continue stay locked while the mirror is sealed")
-	check(sealed.hint.text == "你需要找到办法进入镜面" and sealed.hint.modulate.r > sealed.hint.modulate.g, "the sealed screen shows the pale red hint")
+	check(sealed.hint.text == "你需要按键进入镜面" and sealed.hint.modulate.r > sealed.hint.modulate.g, "the sealed screen shows the pale red hint")
 	var hold := InputEventKey.new()
 	hold.keycode = KEY_M
 	hold.physical_keycode = KEY_M

@@ -148,7 +148,7 @@ stateDiagram-v2
 - 序章：4 段 `STORY_LINES`（`scripts/opening.gd:5-10`）；进入时禁用镜像输入（:36-40），先等 0.7s 吞掉切场景残余输入（:64-65），最后淡出进 gameplay（:104-116）。
 - 关卡：`gameplay.gd:39-45` 在建关前先判断终幕/完成分支；否则 `LevelBuilder.build()` + spawn/checkpoint + 创建分身 + 绑定 `goal.collected`（:47-78）；收集/出口后 `advance_level()` 再 `load_level()`（:105-106）。R 键直接整关重建（:123-126）。
 - 暂停与中途退出：gameplay 与 finale 都带 `pause_menu.gd`（CanvasLayer 140），Esc（`ui_cancel`）打开；「继续游戏」恢复，「保存并返回标题」调用 `GameState.persist_run()` 写档后回开始界面。窗口关闭时 `GameState._on_close_requested()` 也会在 gameplay/finale 场景自动保存。
-- 封镜与重入：终幕揭示读完后 `_seal_mirror_to_title()` 调 `GameState.seal_mirror()`（写 `mirror_sealed/revelation_done`）并强制回标题；标题把「踏入镜中 / 继续旅程」置灰上锁（🔒）并显示浅红提示「你需要找到办法进入镜面」，此时按住 M 约 **1.5s** 会叠加克制的画面抖动与偏红变色异象（`shaders/mirror_hollow.gdshader`），充满后 `open_mirror()` 并回到终幕的 CROSSOVER 继续（`finale.gd:338-383`、`title_screen.gd:59-132`）。
+- 封镜与重入：终幕揭示读完后 `_seal_mirror_to_title()` 调 `GameState.seal_mirror()`（写 `mirror_sealed/revelation_done`）并强制回标题；标题把「踏入镜中 / 继续旅程」置灰上锁（🔒）并显示浅红提示「你需要按键进入镜面」，此时按住 M 约 **1.5s** 会叠加克制的画面抖动与偏红变色异象（`shaders/mirror_hollow.gdshader`），充满后 `open_mirror()` 并回到终幕的 CROSSOVER 继续（`finale.gd:338-383`、`title_screen.gd:59-132`）。
 - 终幕：10 相位 `THRESHOLD→CROSSOVER→BETRAYAL→CHASE→SHATTER→CONFESSION→FUSION→REUNION→EMBRACE→DEPARTURE`（`scripts/finale.gd:3`）；`DEPARTURE` 末尾 `complete_journey()` 后切结局（:557-559）；续玩时 `_ready` 按 `has_offered_colors()` / `revelation_done` 决定从碎镜后、CROSSOVER 或揭示开头继续（:85-107）。
 - 结局：显示文案 + 「再走一次」回标题（`scripts/ending_screen.gd:22-23`）。
 

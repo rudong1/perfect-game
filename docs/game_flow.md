@@ -49,7 +49,7 @@ flowchart TD
 | 4 | 四关循环 `gameplay.tscn` | 移动/跳跃/推镜/穿镜/翻转等（见 §3） | `LevelBuilder.build()` 程序化建关 → 解谜 → 开出口 → 收集颜色或进入下一关 | 存档点/收集/过关写 `user://mirror_save.cfg` |
 | 5 | 颜色 CG `collection_cg.gd` | 最短 1.8s 后 Enter / 左键继续 | 暂停整棵树、显示对应颜色 CG；确认后 `advance_level()` → 重载下一关（`gameplay.gd:80-106`） | 颜色在 CG 前已写档；中断后继续会重看 CG |
 | 6 | 终幕 `finale.tscn` | 读对白、被追逐时向右跑、Shift 冲刺 | 10 相位演出（见 §4），期间可 Esc 暂停/保存并返回标题 | 赠色/复活/离开各阶段写档 |
-| 6.5 | 封镜（标题） | 强制回到开始界面；按住 M 约 1.5s | 「踏入镜中 / 继续旅程」上锁 + 浅红提示「你需要找到办法进入镜面」；按住 M 时画面出现克制的抖动与偏红异象，充满后重开镜面 | 写 `mirror_sealed`；重开后写 `revelation_done`；音乐 explore |
+| 6.5 | 封镜（标题） | 强制回到开始界面；按住 M 约 1.5s | 「踏入镜中 / 继续旅程」上锁 + 浅红提示「你需要按键进入镜面」；按住 M 时画面出现克制的抖动与偏红异象，充满后重开镜面 | 写 `mirror_sealed`；重开后写 `revelation_done`；音乐 explore |
 | 7 | 结局 `ending_screen.tscn` | 「再走一次」 | 显示主角名字与结局文案，回开始界面（`ending_screen.gd:14-23`） | 音乐 reunion |
 
 ---
@@ -98,7 +98,7 @@ stateDiagram-v2
 | 相位 | 内容 | 关键实现 |
 | --- | --- | --- |
 | THRESHOLD | 镜门只回应主角，她的手穿过光；旧字与「不算活着的人」揭示 | `REVELATION_BEATS`（`finale.gd:38-44`）、`_advance_dialogue()` |
-| SEALED | 揭示读完 → 写 `mirror_sealed` 并强制回标题；两个入口上锁，浅红提示「你需要找到办法进入镜面」，按住 M 1.5s 的抖动/偏红异象后重开 | `finale.gd:338-383`、`title_screen.gd:59-132`、`shaders/mirror_hollow.gdshader` |
+| SEALED | 揭示读完 → 写 `mirror_sealed` 并强制回标题；两个入口上锁，浅红提示「你需要按键进入镜面」，按住 M 1.5s 的抖动/偏红异象后重开 | `finale.gd:338-383`、`title_screen.gd:59-132`、`shaders/mirror_hollow.gdshader` |
 | CROSSOVER | 倒影走出镜面，边界消失的 1.3s 过场 | `_draw()` 的 `Phase.CROSSOVER` 分支（`finale.gd:264-275`）、`_begin_crossover()`（`:369-374`） |
 | BETRAYAL | 「这一次，我不想再做留下的那个人。」→ 进入追逐准备 | `finale.gd:276-281` |
 | CHASE | 影子追击；向右跑向巨镜，被追上即重试 | `finale.gd:279-285,376-402` |
@@ -153,7 +153,7 @@ stateDiagram-v2
 | 新游戏 | 开始界面「踏入镜中」→ 命名确认 | 清档 → 序章 → 第一关 |
 | 彩蛋 | 命名时输入 `darksky` | 提示改为「为你自己命名」，其余流程不变 |
 | 继续旅程 | 开始界面「继续旅程」 | 按存档分支进入终幕 / 结局 / 对应关卡；封镜中则回到上锁的开始界面 |
-| 封镜 | 终幕揭示读完 | 强制回标题；「踏入镜中 / 继续旅程」上锁，显示浅红提示「你需要找到办法进入镜面」 |
+| 封镜 | 终幕揭示读完 | 强制回标题；「踏入镜中 / 继续旅程」上锁，显示浅红提示「你需要按键进入镜面」 |
 | 重开镜面 | 封镜时按住 M 约 1.5s | 画面出现克制的抖动/偏红异象；充满后回终幕 CROSSOVER 继续 |
 | 中途退出 | 游戏内 Esc →「保存并返回标题」/ 关闭窗口 | 写档后回开始界面 / 直接退出；下次从最近存档点继续 |
 | 暂停 | Esc | 继续游戏；与拾色 CG 的暂停互不抢占 |
