@@ -4,6 +4,9 @@ extends Control
 
 const MENU_HINT := "按 Enter 踏入镜中"
 const NAMING_HINT := "留空则名为「无名」 · Enter 确认 · Esc 返回"
+const NAME_LABEL := "为第一位坠落的少女命名"
+const EGG_LABEL := "为你自己命名"
+const EGG_NAME := "darksky"
 
 @onready var backdrop: TextureRect = $Backdrop
 @onready var heading: Label = $MenuPanel/Heading
@@ -27,6 +30,7 @@ func _ready() -> void:
 	continue_button.pressed.connect(_continue)
 	quit_button.pressed.connect(_quit)
 	name_edit.text_submitted.connect(_on_name_submitted)
+	name_edit.text_changed.connect(_on_name_changed)
 	var state := get_node_or_null("/root/GameState")
 	if state != null and bool(state.call("has_save")):
 		continue_button.visible = true
@@ -55,6 +59,7 @@ func _open_naming() -> void:
 func _set_naming(value: bool) -> void:
 	_naming = value
 	heading.text = "镜中姓名" if value else "开始旅程"
+	name_label.text = NAME_LABEL
 	name_label.visible = value
 	name_edit.visible = value
 	confirm_button.visible = value
@@ -68,6 +73,13 @@ func _set_naming(value: bool) -> void:
 func _on_name_submitted(_text: String) -> void:
 	if _naming:
 		_commit_name()
+
+
+func _on_name_changed(text: String) -> void:
+	if not _naming:
+		return
+	# Hidden easter egg: typing her true name flips the prompt to "为你自己命名".
+	name_label.text = EGG_LABEL if text.strip_edges().to_lower() == EGG_NAME else NAME_LABEL
 
 
 func _commit_name() -> void:

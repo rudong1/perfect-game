@@ -140,7 +140,7 @@ stateDiagram-v2
     EndingScreen --> TitleScreen: 「再走一次」
 ```
 
-- 标题（开始界面）：菜单首屏只有「踏入镜中 / 继续旅程 / 退出游戏」；点击「踏入镜中」后才展开命名步骤（`_open_naming()`），确认后 `_commit_name()` 调 `GameState.begin_game()`（清档）→ opening；`_continue()` → `load_from_disk()` 后按 `is_finale_pending()` / `is_game_complete()` 三分支（`scripts/title_screen.gd:50-97`）。Esc 在命名步骤返回菜单，在菜单则退出游戏。
+- 标题（开始界面）：菜单首屏只有「踏入镜中 / 继续旅程 / 退出游戏」；点击「踏入镜中」后才展开命名步骤（`_open_naming()`），确认后 `_commit_name()` 调 `GameState.begin_game()`（清档）→ opening；`_continue()` → `load_from_disk()` 后按 `is_finale_pending()` / `is_game_complete()` 三分支（`scripts/title_screen.gd:54-111`）。命名提示默认「为第一位坠落的少女命名」；输入 `darksky`（忽略大小写、去首尾空格）时切换为「为你自己命名」的彩蛋提示，改成其他名字即恢复。Esc 在命名步骤返回菜单，在菜单则退出游戏。
 - 序章：4 段 `STORY_LINES`（`scripts/opening.gd:5-10`）；进入时禁用镜像输入（:36-40），先等 0.7s 吞掉切场景残余输入（:64-65），最后淡出进 gameplay（:104-116）。
 - 关卡：`gameplay.gd:39-45` 在建关前先判断终幕/完成分支；否则 `LevelBuilder.build()` + spawn/checkpoint + 创建分身 + 绑定 `goal.collected`（:47-78）；收集/出口后 `advance_level()` 再 `load_level()`（:105-106）。R 键直接整关重建（:123-126）。
 - 暂停与中途退出：gameplay 与 finale 都带 `pause_menu.gd`（CanvasLayer 140），Esc（`ui_cancel`）打开；「继续游戏」恢复，「保存并返回标题」调用 `GameState.persist_run()` 写档后回开始界面。窗口关闭时 `GameState._on_close_requested()` 也会在 gameplay/finale 场景自动保存。

@@ -46,6 +46,11 @@ func run() -> void:
 	title.begin_button.pressed.emit()
 	await frames(2)
 	check(title.name_edit.visible and not title.begin_button.visible, "踏入镜中 reveals the naming step")
+	check(title.name_label.text == "为第一位坠落的少女命名", "the naming step names the first fallen girl")
+	title._on_name_changed("DarkSky")
+	check(title.name_label.text == "为你自己命名", "typing darksky flips the prompt to a personal address")
+	title._on_name_changed("存档测试")
+	check(title.name_label.text == "为第一位坠落的少女命名", "any other name keeps the original prompt")
 	title.name_edit.text = "存档测试"
 	title.confirm_button.pressed.emit()
 	await frames(8)

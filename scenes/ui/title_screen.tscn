@@ -66,9 +66,8 @@ offset_top = 350.0
 offset_right = 978.0
 offset_bottom = 530.0
 theme_override_font_sizes/font_size = 24
-text = "很久以前，一个女孩掉进了镜面世界。
-许多年后，她终于等来了第二个倒霉蛋。
-这一次，你将成为那个后来者。"
+text = "很久很久以前，有一个女孩掉入了镜面世界，
+为了逃离，她将与镜中的自己合作。"
 autowrap_mode = 2
 
 [node name="MenuPanel" type="Panel" parent="."]
@@ -106,7 +105,7 @@ offset_right = 612.0
 offset_bottom = 128.0
 modulate = Color(0.62352943, 0.6901961, 0.78431374, 1)
 theme_override_font_sizes/font_size = 18
-text = "为新坠入镜面的女孩命名（可留空）"
+text = "为第一位坠落的少女命名"
 
 [node name="NameEdit" type="LineEdit" parent="MenuPanel" unique_id=1290546851]
 visible = false
