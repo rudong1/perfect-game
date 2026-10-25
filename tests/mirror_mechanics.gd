@@ -7,6 +7,7 @@ var game: Node2D
 var state: Node
 var mirror: Node
 var _heard: Array[StringName] = []
+var _music_tracks: Array[StringName] = []
 
 func _initialize() -> void:
 	call_deferred("run")
@@ -101,6 +102,8 @@ func press_key(code: Key, repeat: bool = false) -> void:
 
 func view_pickup(index: int, resume_save: bool = true) -> void:
 	var cg: CanvasLayer = game.collection_cg
+	var music: Node = root.get_node("MusicDirector")
+	check(music.current_track == &"explore" and not music._credits.visible and (music._voices[0].playing or music._voices[1].playing), "exploration music keeps playing quietly behind the paused pickup without showing credit UI over the CG")
 	var cues := [&"crystal_red", &"crystal_blue", &"crystal_green"]
 	check(not _heard.is_empty() and _heard.back() == cues[index], "actual and developer pickups play the matching quiet colour chime before the CG pause")
 	var heard_before := _heard.size()
@@ -275,6 +278,8 @@ func run() -> void:
 	mirror = root.get_node("MirrorState")
 	var sound: Node = root.get_node("SoundEffects")
 	sound.effect_played.connect(func(cue: StringName) -> void: _heard.append(cue))
+	var music: Node = root.get_node("MusicDirector")
+	music.track_changed.connect(func(track: StringName) -> void: _music_tracks.append(track))
 	var effects_bus := AudioServer.get_bus_index(&"SFX")
 	check(effects_bus > 0 and AudioServer.get_bus_volume_db(effects_bus) < -7.99 and is_zero_approx(AudioServer.get_bus_volume_db(0)), "effects use their own quiet bus without turning down the master output")
 	var title: Control = load("res://scenes/ui/title_screen.tscn").instantiate()
@@ -286,6 +291,7 @@ func run() -> void:
 	title.begin_button.pressed.emit()
 	await frames(8)
 	check(current_scene.scene_file_path.ends_with("opening.tscn"), "a new journey preserves the remote prologue")
+	check(music.current_track == &"explore", "the prologue uses the same quiet exploration score as the title")
 	check(current_scene.get_node("Photo").texture.resource_path.ends_with("mirror_hands.png"), "the prologue preserves the illustrated single-palm meeting")
 	check(not mirror.input_enabled and not mirror.mirrored, "prologue keeps gameplay mirroring disabled")
 	var enter := InputEventKey.new()
@@ -303,6 +309,7 @@ func run() -> void:
 	await frames(100)
 	game = current_scene
 	check(game.scene_file_path.ends_with("gameplay.tscn") and mirror.input_enabled, "Enter moves from the prologue into the playable church")
+	check(music.current_track == &"explore" and _music_tracks.count(&"explore") == 1, "entering gameplay preserves the exploration music instead of restarting it")
 	await frames(8)
 	var player: CharacterBody2D = game.player
 	var shadow: CharacterBody2D = game.echo
@@ -633,6 +640,7 @@ func run() -> void:
 		await physics_frame
 		if not parallax_seen and chase.camera.position.x > 1300:
 			check(chase.backdrop.near_strip.position.x < chase.backdrop.far_strip.position.x and chase.backdrop.far_strip.position.x < 0, "both architecture layers move with the camera at different depths")
+			check(music.current_track == &"chase", "the real running chase crossfades to the tension score")
 			parallax_seen = true
 		if chase.phase == chase.Phase.SHATTER:
 			break
@@ -642,12 +650,15 @@ func run() -> void:
 	check(_heard.count(&"mirror_shatter") == glass_cues + 1, "the actual giant-mirror impact plays one soft shatter with a falling-glass tail")
 	chase.mirror_body.shatter()
 	check(_heard.count(&"mirror_shatter") == glass_cues + 1, "an already shattered mirror cannot replay the impact sound")
+	await frames(2)
+	check(music.current_track == &"", "music falls away at the giant-mirror impact so glass remains audible")
 	var glass_is_valid: bool = not chase.mirror_body._shards.is_empty()
 	for shard in chase.mirror_body._shards:
 		glass_is_valid = glass_is_valid and not Geometry2D.triangulate_polygon(shard.points).is_empty() and shard.uvs.size() == shard.points.size()
 	check(glass_is_valid, "all clipped glass fragments remain valid renderable polygons")
 	await frames(70)
 	check(chase.phase == chase.Phase.CONFESSION and not chase.shadow.visible, "breaking the mirror stops the pursuit and leaves an image in a shard")
+	check(music.current_track == &"explore", "the confession returns to a restrained, quiet atmosphere")
 	check(chase._caption.text.contains("赠予") and chase._memory_glass.visible, "the mirror's newly revealed inscription explains voluntary giving before the rescue")
 	check(not state.is_game_complete(), "the finale waits for the rescue before marking the journey complete")
 	chase._next.pressed.emit()
@@ -667,6 +678,8 @@ func run() -> void:
 		chase._next.pressed.emit()
 	check(heard_history and heard_apology and heard_response, "the heroine hears her trapped companion's history and responds before choosing the gift")
 	check(chase.phase == chase.Phase.FUSION and state.collected_count() == 0 and state.has_offered_colors(), "voluntarily giving spends all three collected colours and starts their fusion")
+	await frames(2)
+	check(music.current_track == &"reunion", "voluntary giving begins the warmer reunion score before the new character appears")
 	check(chase.player.current_animation == "reach" and chase._memory.animation == &"reach", "the colour gift recalls their opening single-palm gesture")
 	check(not state.offer_colors() and not state.darksky_revived, "the gift cannot be spent twice or grant life before the transformation")
 	check(state.load_from_disk() and state.offered_mask == 7 and state.collected_count() == 0 and not state.darksky_revived, "a save during the gift preserves the spent colours and unfinished revival")
@@ -708,8 +721,10 @@ func run() -> void:
 		await frames(23)
 		chase._next.pressed.emit()
 	check(chase.phase == chase.Phase.DEPARTURE and not state.is_game_complete(), "the two girls leave together through a transition before the ending is saved")
+	var tracks_before_ending := _music_tracks.size()
 	await frames(85)
 	check(state.is_game_complete() and current_scene.scene_file_path.ends_with("ending_screen.tscn"), "leaving together completes the resurrection ending")
+	check(music.current_track == &"reunion" and _music_tracks.size() == tracks_before_ending and music._credits.visible, "embrace, departure and ending share continuous music with accessible attribution on the final card")
 	check(current_scene.backdrop.texture.resource_path.ends_with("ending_together.png"), "the final card displays the generated hand-in-hand departure CG")
 	check(state.load_from_disk() and state.ending_reached and state.darksky_revived and state.has_offered_colors() and state.collected_count() == 0 and state.current_level == 4, "the completed resurrection and actually spent colours round-trip through save")
 	change_scene_to_file("res://scenes/ui/title_screen.tscn")
@@ -734,4 +749,5 @@ func run() -> void:
 	check(state.current_level == 4 and state.collected_count() == 0 and state.is_finale_pending() and not paused, "P at the final exit enters the finale without inventing a fourth colour or leaving a modal pause")
 	state.begin_game("新旅程")
 	print("MIRROR TESTS: %d checks, %d failures" % [checks, failures])
+	await music.prepare_shutdown()
 	quit(1 if failures else 0)

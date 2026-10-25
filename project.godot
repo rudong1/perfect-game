@@ -24,6 +24,7 @@ buses/default_bus_layout="res://assets/audio/default_bus_layout.tres"
 MirrorState="*res://scripts/mirror_state.gd"
 GameState="*res://scripts/game_state.gd"
 SoundEffects="*res://scripts/sound_effects.gd"
+MusicDirector="*res://scripts/music_director.gd"
 
 [display]
 

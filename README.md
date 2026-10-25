@@ -65,6 +65,8 @@ Godot 4.7.2 标准版的 2D 镜像解谜游戏。少女与晚半拍的分身走�
 
 镜像翻转、成功穿镜、红蓝绿晶体收集与终幕碎镜均有独立的轻音量音效。整体通过 SFX 总线压低，玻璃高频柔化，最多四个短音叠加；收集音会在 CG 暂停期间自然结束。重置、被阻挡的传送及读取已经收集或碎镜的存档保持安静。[音效说明与调音位置](assets/audio/README.md)
 
+配乐使用 Kevin MacLeod 的三首 CC BY 4.0 作品：解谜与镜中相遇用《Ghost Story》，追逐用《The Descent》，赠色、拥抱和结尾用《Teller of the Tales》。独立 Music 通道保持低音量，对白和音效时再压低；碎镜瞬间淡出，循环与切曲均有交叉淡化，换关及走入结局时保持旋律连续。标题与结尾可查看「音乐鸣谢」，[完整署名和许可](assets/audio/music/CREDITS.txt) 随配乐附带。
+
 ![教堂中的分身配合](docs/level_01.png)
 
 ![三色光路接通](docs/level_blue.png)
@@ -89,9 +91,12 @@ Godot 4.7.2 标准版的 2D 镜像解谜游戏。少女与晚半拍的分身走�
 godot --headless --editor --import --quit
 XDG_DATA_HOME="$(mktemp -d)" godot --headless --fixed-fps 60 --path . --script res://tests/mirror_mechanics.gd
 XDG_DATA_HOME="$(mktemp -d)" godot --headless --audio-driver Dummy --path . --script res://tests/audio_mix.gd
+XDG_DATA_HOME="$(mktemp -d)" godot --headless --audio-driver Dummy --path . --script res://tests/music_playback.gd
 ```
 
 音频混音测试按真实时间运行，录取 Master 输出，验证六段音效能实际发声、经过低音量推子，以及四段叠加时不会过响或削波；请勿为这项测试添加 `--fixed-fps`。
+
+音乐测试同样使用真实时间，验证场景切曲、CG 暂停续播、音乐鸣谢、双音源循环、碎镜让位，以及音乐与四段音效叠加后的实际输出。
 
 新美术包括 [复活 CG](assets/backgrounds/ending_revival.png)、[拥抱 CG](assets/backgrounds/ending_embrace.png)、[同行 CG](assets/backgrounds/ending_together.png)、[darksky 动作图](assets/characters/darksky/darksky_motion.png)、[镜前相遇](assets/backgrounds/mirror_hands.png)、[跑步摆臂](assets/characters/hero/hero_run.png)、[单手贴掌](assets/characters/hero/hero_reach.png)、[三色追逐远景](assets/backgrounds/chase_far.png)、[透明拱廊](assets/backgrounds/chase_near.png)、[哥特巨镜](assets/props/gothic_mirror.png) 和 [推镜立柱](assets/props/mirror_slab.png)。透明边距通过 AtlasTexture 裁取，原图保持完整。
 

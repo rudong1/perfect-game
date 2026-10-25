@@ -1,0 +1,30 @@
+Music attribution / 音乐鸣谢
+============================
+
+"Ghost Story", "The Descent", "Teller of the Tales"
+by Kevin MacLeod (incompetech.com)
+Licensed under Creative Commons: By Attribution 4.0
+https://creativecommons.org/licenses/by/4.0/
+
+Ghost Story — title, prologue and exploration
+https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1300034
+
+The Descent — pursuit
+https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1200094
+
+Teller of the Tales — freely giving the colours, reunion, embrace and ending
+https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1400020
+
+Modifications for this game: silent-edge cropping, loudness normalization,
+short fades and Ogg Vorbis re-encoding. Music is looped and crossfaded during
+playback; the compositions and authorship are unchanged.
+
+为配合游戏做了静音边缘裁切、响度归一化、短淡入淡出和 Ogg 转码；
+播放时循环与交叉淡化。作曲与署名归原作者。
+
+Distribution source (audio and explicit per-track CC BY 4.0 credits):
+https://github.com/Sayshal/minstrel-packs-music-01/tree/ce4e1d1a517101aed56ea47d9f795a5be1d251cd/assets/audio
+https://github.com/Sayshal/minstrel-packs-music-01/blob/ce4e1d1a517101aed56ea47d9f795a5be1d251cd/assets/audio/ATTRIBUTION.txt
+
+Individual download URLs, original hashes, edits and output hashes are recorded
+in sources.json. These music files retain CC BY 4.0 independently of game code.
