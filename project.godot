@@ -15,10 +15,15 @@ run/main_scene="res://scenes/ui/title_screen.tscn"
 config/features=PackedStringArray("4.7", "Mobile")
 config/icon="res://icon.svg"
 
+[audio]
+
+buses/default_bus_layout="res://assets/audio/default_bus_layout.tres"
+
 [autoload]
 
 MirrorState="*res://scripts/mirror_state.gd"
 GameState="*res://scripts/game_state.gd"
+SoundEffects="*res://scripts/sound_effects.gd"
 
 [display]
 

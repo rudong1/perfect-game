@@ -63,6 +63,8 @@ Godot 4.7.2 标准版的 2D 镜像解谜游戏。少女与晚半拍的分身走�
 
 [灰色实机画面](docs/level_01.png) · [红色实机画面](docs/level_red.png) · [蓝色实机画面](docs/level_blue.png) · [绿色实机画面](docs/level_green.png) · [翻转画面](docs/level_01_mirror.png)
 
+镜像翻转、成功穿镜、红蓝绿晶体收集与终幕碎镜均有独立的轻音量音效。整体通过 SFX 总线压低，玻璃高频柔化，最多四个短音叠加；收集音会在 CG 暂停期间自然结束。重置、被阻挡的传送及读取已经收集或碎镜的存档保持安静。[音效说明与调音位置](assets/audio/README.md)
+
 ![教堂中的分身配合](docs/level_01.png)
 
 ![三色光路接通](docs/level_blue.png)
@@ -86,7 +88,10 @@ Godot 4.7.2 标准版的 2D 镜像解谜游戏。少女与晚半拍的分身走�
 ```sh
 godot --headless --editor --import --quit
 XDG_DATA_HOME="$(mktemp -d)" godot --headless --fixed-fps 60 --path . --script res://tests/mirror_mechanics.gd
+XDG_DATA_HOME="$(mktemp -d)" godot --headless --audio-driver Dummy --path . --script res://tests/audio_mix.gd
 ```
+
+音频混音测试按真实时间运行，录取 Master 输出，验证六段音效能实际发声、经过低音量推子，以及四段叠加时不会过响或削波；请勿为这项测试添加 `--fixed-fps`。
 
 新美术包括 [复活 CG](assets/backgrounds/ending_revival.png)、[拥抱 CG](assets/backgrounds/ending_embrace.png)、[同行 CG](assets/backgrounds/ending_together.png)、[darksky 动作图](assets/characters/darksky/darksky_motion.png)、[镜前相遇](assets/backgrounds/mirror_hands.png)、[跑步摆臂](assets/characters/hero/hero_run.png)、[单手贴掌](assets/characters/hero/hero_reach.png)、[三色追逐远景](assets/backgrounds/chase_far.png)、[透明拱廊](assets/backgrounds/chase_near.png)、[哥特巨镜](assets/props/gothic_mirror.png) 和 [推镜立柱](assets/props/mirror_slab.png)。透明边距通过 AtlasTexture 裁取，原图保持完整。
 

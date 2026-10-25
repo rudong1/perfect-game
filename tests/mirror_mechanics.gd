@@ -6,6 +6,7 @@ var checks := 0
 var game: Node2D
 var state: Node
 var mirror: Node
+var _heard: Array[StringName] = []
 
 func _initialize() -> void:
 	call_deferred("run")
@@ -100,6 +101,9 @@ func press_key(code: Key, repeat: bool = false) -> void:
 
 func view_pickup(index: int, resume_save: bool = true) -> void:
 	var cg: CanvasLayer = game.collection_cg
+	var cues := [&"crystal_red", &"crystal_blue", &"crystal_green"]
+	check(not _heard.is_empty() and _heard.back() == cues[index], "actual and developer pickups play the matching quiet colour chime before the CG pause")
+	var heard_before := _heard.size()
 	check(paused and cg.active and cg.art_index == index and state.current_level == index, "a real pickup pauses the room in the matching CG before advancing")
 	var expected_art := ["collect_red.png", "collect_blue.png", "collect_green.png"]
 	check(cg._art.texture.resource_path.ends_with(expected_art[index]) and cg._art.texture.get_width() >= 1600, "each RGB pickup uses its own full-resolution illustration")
@@ -117,6 +121,7 @@ func view_pickup(index: int, resume_save: bool = true) -> void:
 	await frames(12)
 	release_controls()
 	check(game.player.position == heroine_at and game.echo.position == echo_at and mirror.mirrored == was_mirrored and state.current_level == index, "movement, jump, flip, transport, restart and developer skip cannot alter a paused pickup")
+	check(_heard.size() == heard_before, "blocked gameplay keys produce no sound behind the collection CG")
 	await frames(120)
 	check(cg.armed and cg._continue.visible and state.current_level == index, "the CG stays visible after its minimum viewing time until a fresh confirmation")
 	await press_key(KEY_ENTER, true)
@@ -131,6 +136,7 @@ func view_pickup(index: int, resume_save: bool = true) -> void:
 		game = current_scene
 		cg = game.collection_cg
 		check(paused and cg.active and cg.art_index == index and state.current_level == index and state.collected_count() == 2, "Continue resumes the interrupted blue CG with the saved colour and no repeated puzzle")
+		check(_heard.size() == heard_before, "Continue does not replay a pickup sound for a colour already saved")
 		await frames(120)
 	# Exercise both supported confirmation methods with real input events.
 	if index == 1:
@@ -267,6 +273,10 @@ func run() -> void:
 	await process_frame
 	state = root.get_node("GameState")
 	mirror = root.get_node("MirrorState")
+	var sound: Node = root.get_node("SoundEffects")
+	sound.effect_played.connect(func(cue: StringName) -> void: _heard.append(cue))
+	var effects_bus := AudioServer.get_bus_index(&"SFX")
+	check(effects_bus > 0 and AudioServer.get_bus_volume_db(effects_bus) < -7.99 and is_zero_approx(AudioServer.get_bus_volume_db(0)), "effects use their own quiet bus without turning down the master output")
 	var title: Control = load("res://scenes/ui/title_screen.tscn").instantiate()
 	root.add_child(title)
 	current_scene = title
@@ -298,6 +308,15 @@ func run() -> void:
 	var shadow: CharacterBody2D = game.echo
 	check(shadow.global_position.distance_to(mirror.reflect_point(player.global_position)) < 1, "shadow starts across shared mirror axis")
 	check(shadow.hint.text.contains("影子") and shadow.sprite.material != null, "shadow has a distinct tint and readable identity")
+	check(_heard.is_empty(), "title, prologue and initial mirror setup stay quiet")
+	await press_key(KEY_M)
+	check(mirror.mirrored and _heard.count(&"mirror_flip") == 1, "an actual successful M flip plays exactly one glass-and-air cue")
+	await press_key(KEY_M, true)
+	check(_heard.count(&"mirror_flip") == 1, "held mirror input does not repeat the sound")
+	mirror.reset()
+	await frames(3)
+	check(_heard.count(&"mirror_flip") == 1, "programmatic mirror reset never plays a false flip sound")
+	await room(0)
 	Input.action_press("move_right")
 	await frames(12)
 	check(absf(shadow.velocity.x) < 1 and player.velocity.x > 100, "shadow visibly waits before following")
@@ -445,6 +464,7 @@ func run() -> void:
 	var exit: Vector2 = transport.exit_for(before)
 	await key_e()
 	check(transport.used and absf(player.position.x - exit.x) < 2, "E uses the exact horizontal reflection formula")
+	check(_heard.back() == &"mirror_pass", "successful physical transport plays its quiet portal cue")
 	check(not game._goal.enabled, "crossing a calibrated mirror without landing on the receiver does not open the corridor")
 	await walk_to(1230)
 	check(not game._goal.enabled, "walking onto the receiver cannot substitute for the correctly reflected arrival")
@@ -473,8 +493,10 @@ func run() -> void:
 	game.level_root.add_child(blocker)
 	await frames(3)
 	before = player.position
+	var sounds_before_blocked := _heard.size()
 	check(not transport.try_transport(player), "a real body at the exit blocks unsafe transport")
 	check(player.position.distance_to(before) < 0.1, "failed transit leaves the player in place")
+	check(_heard.size() == sounds_before_blocked, "a rejected portal does not sound like a successful crossing")
 	blocker.queue_free()
 	await frames(2)
 
@@ -590,6 +612,7 @@ func run() -> void:
 	await frames(6)
 	check(current_scene.scene_file_path.ends_with("finale.tscn") and state.collected_count() == 3, "Continue actually reloads the saved chase instead of restarting the puzzles")
 	var chase: Node2D = current_scene
+	var glass_cues := _heard.count(&"mirror_shatter")
 	check(not Geometry2D.triangulate_polygon(chase.mirror_body._outline).is_empty(), "the generated mirror has valid fragmentation bounds")
 	check(chase.mirror_body._graphic.texture is AtlasTexture, "the giant mirror uses the generated Gothic artwork")
 	await prepare_chase(chase)
@@ -616,6 +639,9 @@ func run() -> void:
 	release_controls()
 	check(parallax_seen, "the chase actually scrolls the church instead of only shifting the paving")
 	check(chase.mirror_body.is_broken and chase.player.position.x >= chase.MIRROR_X - chase.mirror_body.impact_distance - 8, "actual rightward movement reaches and shatters the giant blocking mirror")
+	check(_heard.count(&"mirror_shatter") == glass_cues + 1, "the actual giant-mirror impact plays one soft shatter with a falling-glass tail")
+	chase.mirror_body.shatter()
+	check(_heard.count(&"mirror_shatter") == glass_cues + 1, "an already shattered mirror cannot replay the impact sound")
 	var glass_is_valid: bool = not chase.mirror_body._shards.is_empty()
 	for shard in chase.mirror_body._shards:
 		glass_is_valid = glass_is_valid and not Geometry2D.triangulate_polygon(shard.points).is_empty() and shard.uvs.size() == shard.points.size()
@@ -670,6 +696,7 @@ func run() -> void:
 	await frames(6)
 	chase = current_scene
 	check(chase.phase == chase.Phase.REUNION and state.darksky_revived and state.collected_count() == 0, "Continue after revival resumes the reunion without resurrecting or spending again")
+	check(_heard.count(&"mirror_shatter") == glass_cues + 1, "loading fusion and reunion saves does not sound like shattering the mirror again")
 	for i in chase.REUNION_BEATS.size():
 		check(chase._caption.text.contains("darksky") == (i == chase.REUNION_BEATS.size() - 1), "her true name is revealed only in the last reunion line")
 		if chase.phase == chase.Phase.EMBRACE:
