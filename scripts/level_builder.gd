@@ -25,7 +25,7 @@ func build(index: int, parent: Node2D) -> Dictionary:
 	match index:
 		0:
 			var lesson := _step(parent, [[430, false, false], [570, true, true]], 720, false)
-			lesson.hint = "先越过两块踏板再折返，让晚半拍的她留在上方，你踩下方本体板。"
+			lesson.hint = "先越过两块踏板再折返，让晚半拍的身影留在上方，你踩下方本体板。"
 			steps.append(lesson)
 			var ascent := _step(parent, [[980, true, false], [840, false, true]], 1190, true)
 			ascent.hint = "第一道门已开。按 M 换面，再向右，让本体与倒影接力压住第二组。"
