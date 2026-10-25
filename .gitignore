@@ -4,3 +4,6 @@
 
 # Godot-MCP 自动生成的 agent skills（编辑器启动时重建）
 .claude/skills/
+
+# Godot-MCP 本地编辑器连接配置（每台机器可不同；模板见 .env.example）
+.env
