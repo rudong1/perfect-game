@@ -92,11 +92,23 @@ var light_channels := 0
 var ending_reached := false
 var offered_mask := 0
 var darksky_revived := false
+var run_active := false
 
 func _ready() -> void:
 	# Keep the internal project/save identity stable while renaming the game.
 	if DisplayServer.get_name() != "headless":
 		DisplayServer.window_set_title(GAME_TITLE)
+	# Closing the window mid-room must keep the run that checkpoints already wrote.
+	get_tree().root.close_requested.connect(_on_close_requested)
+
+func _on_close_requested() -> void:
+	if not run_active:
+		return
+	var scene := get_tree().current_scene
+	if scene == null:
+		return
+	if scene.scene_file_path in ["res://scenes/gameplay/gameplay.tscn", "res://scenes/finale/finale.tscn"]:
+		_save_game()
 
 func begin_game(name: String) -> void:
 	end_light_puzzle()
@@ -107,6 +119,7 @@ func begin_game(name: String) -> void:
 	offered_mask = 0
 	darksky_revived = false
 	clear_save()
+	run_active = true
 	changed.emit()
 
 func get_level(index: int = -1) -> Dictionary:
@@ -218,8 +231,14 @@ func load_from_disk() -> bool:
 		has_checkpoint = false
 		checkpoint_stage = 0
 	end_light_puzzle()
+	run_active = true
 	changed.emit()
 	return true
+
+func persist_run() -> void:
+	# Called by the pause menu when the player chooses to leave mid-room.
+	if run_active:
+		_save_game()
 
 func _save_game() -> void:
 	var config := ConfigFile.new()

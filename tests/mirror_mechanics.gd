@@ -287,8 +287,12 @@ func run() -> void:
 	current_scene = title
 	check(title.get_node("Title").text == state.GAME_TITLE, "the title screen uses the poetic game name")
 	check(title.backdrop.texture.resource_path.ends_with("mirror_hands.png"), "the title uses the generated girl-and-reflection illustration")
-	title.name_edit.text = "测试"
+	check(not title.name_edit.visible, "the start menu withholds the name field until the player steps through")
 	title.begin_button.pressed.emit()
+	await frames(2)
+	check(title.name_edit.visible and not title.begin_button.visible, "踏入镜中 reveals the naming step")
+	title.name_edit.text = "测试"
+	title.confirm_button.pressed.emit()
 	await frames(8)
 	check(current_scene.scene_file_path.ends_with("opening.tscn"), "a new journey preserves the remote prologue")
 	check(music.current_track == &"explore", "the prologue uses the same quiet exploration score as the title")

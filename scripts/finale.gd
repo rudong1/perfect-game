@@ -14,6 +14,7 @@ const REVIVAL_CG = preload("res://assets/backgrounds/ending_revival.png")
 const EMBRACE_CG = preload("res://assets/backgrounds/ending_embrace.png")
 const DARKSKY_FRAMES = preload("res://assets/characters/darksky/darksky_frames.tres")
 const PALETTE = preload("res://scripts/palette.gd")
+const PAUSE_MENU = preload("res://scripts/pause_menu.gd")
 const FUSION_DURATION := 4.2
 const EMBRACE_DURATION := 2.2
 const CONFESSION_BEATS := [
@@ -82,6 +83,10 @@ func _ready() -> void:
 	_build_world()
 	_build_actors()
 	_build_ui()
+	var pause := CanvasLayer.new()
+	pause.name = "PauseMenu"
+	pause.set_script(PAUSE_MENU)
+	add_child(pause)
 	if _state.has_offered_colors():
 		player.position = Vector2(MIRROR_X - mirror_body.impact_distance + 2, 900)
 		mirror_body.shatter()
