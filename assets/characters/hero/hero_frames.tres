@@ -2,6 +2,8 @@
 
 [ext_resource type="Texture2D" path="res://assets/characters/hero/hero_sheet.png" id="old"]
 [ext_resource type="Texture2D" path="res://assets/characters/hero/hero_motion.png" id="motion"]
+[ext_resource type="Texture2D" path="res://assets/characters/hero/hero_run.png" id="run"]
+[ext_resource type="Texture2D" path="res://assets/characters/hero/hero_reach.png" id="reach"]
 
 [sub_resource type="AtlasTexture" id="old_0"]
 atlas = ExtResource("old")
@@ -163,14 +165,95 @@ atlas = ExtResource("motion")
 region = Rect2(768, 1205, 243, 274)
 margin = Rect2(42, 68, 77, 106)
 
+[sub_resource type="AtlasTexture" id="run_0"]
+atlas = ExtResource("run")
+region = Rect2(94, 131, 283, 322)
+margin = Rect2(8, 20, 37, 58)
+
+[sub_resource type="AtlasTexture" id="run_1"]
+atlas = ExtResource("run")
+region = Rect2(540, 128, 263, 329)
+margin = Rect2(25, 10, 57, 51)
+
+[sub_resource type="AtlasTexture" id="run_2"]
+atlas = ExtResource("run")
+region = Rect2(980, 131, 240, 331)
+margin = Rect2(15, 4, 80, 49)
+
+[sub_resource type="AtlasTexture" id="run_3"]
+atlas = ExtResource("run")
+region = Rect2(1422, 129, 248, 330)
+margin = Rect2(14, 8, 72, 50)
+
+[sub_resource type="AtlasTexture" id="run_4"]
+atlas = ExtResource("run")
+region = Rect2(101, 538, 287, 311)
+margin = Rect2(24, 31, 33, 69)
+
+[sub_resource type="AtlasTexture" id="run_5"]
+atlas = ExtResource("run")
+region = Rect2(537, 539, 241, 315)
+margin = Rect2(13, 24, 79, 65)
+
+[sub_resource type="AtlasTexture" id="run_6"]
+atlas = ExtResource("run")
+region = Rect2(976, 538, 269, 312)
+margin = Rect2(20, 23, 51, 68)
+
+[sub_resource type="AtlasTexture" id="run_7"]
+atlas = ExtResource("run")
+region = Rect2(1426, 538, 268, 307)
+margin = Rect2(18, 31, 52, 73)
+
+[sub_resource type="AtlasTexture" id="reach_0"]
+atlas = ExtResource("reach")
+region = Rect2(73, 23, 277, 429)
+margin = Rect2(22, 35, 123, 71)
+
+[sub_resource type="AtlasTexture" id="reach_1"]
+atlas = ExtResource("reach")
+region = Rect2(516, 22, 275, 430)
+margin = Rect2(22, 34, 125, 70)
+
+[sub_resource type="AtlasTexture" id="reach_2"]
+atlas = ExtResource("reach")
+region = Rect2(959, 22, 275, 430)
+margin = Rect2(22, 34, 125, 70)
+
+[sub_resource type="AtlasTexture" id="reach_3"]
+atlas = ExtResource("reach")
+region = Rect2(1401, 22, 274, 430)
+margin = Rect2(22, 34, 126, 70)
+
+[sub_resource type="AtlasTexture" id="reach_4"]
+atlas = ExtResource("reach")
+region = Rect2(74, 467, 278, 418)
+margin = Rect2(20, 46, 122, 82)
+
+[sub_resource type="AtlasTexture" id="reach_5"]
+atlas = ExtResource("reach")
+region = Rect2(516, 467, 278, 418)
+margin = Rect2(21, 46, 122, 82)
+
+[sub_resource type="AtlasTexture" id="reach_6"]
+atlas = ExtResource("reach")
+region = Rect2(960, 467, 277, 417)
+margin = Rect2(20, 47, 123, 83)
+
+[sub_resource type="AtlasTexture" id="reach_7"]
+atlas = ExtResource("reach")
+region = Rect2(1402, 467, 278, 417)
+margin = Rect2(19, 47, 122, 83)
+
 [resource]
 animations = [{"name": &"idle", "speed": 5, "loop": true, "frames": [{"duration": 1.0, "texture": SubResource("old_0")}, {"duration": 1.0, "texture": SubResource("old_1")}, {"duration": 1.0, "texture": SubResource("old_2")}, {"duration": 1.0, "texture": SubResource("old_3")}]},
-{"name": &"run", "speed": 10, "loop": true, "frames": [{"duration": 1.0, "texture": SubResource("motion_0")}, {"duration": 1.0, "texture": SubResource("motion_1")}, {"duration": 1.0, "texture": SubResource("motion_2")}, {"duration": 1.0, "texture": SubResource("motion_3")}, {"duration": 1.0, "texture": SubResource("motion_4")}, {"duration": 1.0, "texture": SubResource("motion_5")}, {"duration": 1.0, "texture": SubResource("motion_6")}, {"duration": 1.0, "texture": SubResource("motion_7")}]},
-{"name": &"sprint", "speed": 14, "loop": true, "frames": [{"duration": 1.0, "texture": SubResource("motion_0")}, {"duration": 1.0, "texture": SubResource("motion_1")}, {"duration": 1.0, "texture": SubResource("motion_2")}, {"duration": 1.0, "texture": SubResource("motion_3")}, {"duration": 1.0, "texture": SubResource("motion_4")}, {"duration": 1.0, "texture": SubResource("motion_5")}, {"duration": 1.0, "texture": SubResource("motion_6")}, {"duration": 1.0, "texture": SubResource("motion_7")}]},
+{"name": &"run", "speed": 10, "loop": true, "frames": [{"duration": 1.0, "texture": SubResource("run_0")}, {"duration": 1.0, "texture": SubResource("run_1")}, {"duration": 1.0, "texture": SubResource("run_2")}, {"duration": 1.0, "texture": SubResource("run_3")}, {"duration": 1.0, "texture": SubResource("run_4")}, {"duration": 1.0, "texture": SubResource("run_5")}, {"duration": 1.0, "texture": SubResource("run_6")}, {"duration": 1.0, "texture": SubResource("run_7")}]},
+{"name": &"sprint", "speed": 14, "loop": true, "frames": [{"duration": 1.0, "texture": SubResource("run_0")}, {"duration": 1.0, "texture": SubResource("run_1")}, {"duration": 1.0, "texture": SubResource("run_2")}, {"duration": 1.0, "texture": SubResource("run_3")}, {"duration": 1.0, "texture": SubResource("run_4")}, {"duration": 1.0, "texture": SubResource("run_5")}, {"duration": 1.0, "texture": SubResource("run_6")}, {"duration": 1.0, "texture": SubResource("run_7")}]},
 {"name": &"jump", "speed": 12, "loop": false, "frames": [{"duration": 1.0, "texture": SubResource("motion_8")}, {"duration": 1.0, "texture": SubResource("motion_9")}, {"duration": 1.0, "texture": SubResource("motion_10")}]},
 {"name": &"apex", "speed": 1, "loop": false, "frames": [{"duration": 1.0, "texture": SubResource("motion_10")}]},
 {"name": &"fall", "speed": 10, "loop": false, "frames": [{"duration": 1.0, "texture": SubResource("motion_10")}, {"duration": 1.0, "texture": SubResource("motion_11")}]},
 {"name": &"land", "speed": 18, "loop": false, "frames": [{"duration": 1.0, "texture": SubResource("motion_12")}, {"duration": 1.0, "texture": SubResource("motion_13")}, {"duration": 1.0, "texture": SubResource("old_0")}]},
 {"name": &"stop", "speed": 15, "loop": false, "frames": [{"duration": 1.0, "texture": SubResource("motion_14")}, {"duration": 1.0, "texture": SubResource("motion_13")}, {"duration": 1.0, "texture": SubResource("old_0")}]},
 {"name": &"push", "speed": 1, "loop": true, "frames": [{"duration": 1.0, "texture": SubResource("motion_15")}]},
+{"name": &"reach", "speed": 12, "loop": false, "frames": [{"duration": 1.0, "texture": SubResource("reach_0")}, {"duration": 1.0, "texture": SubResource("reach_1")}, {"duration": 1.0, "texture": SubResource("reach_2")}, {"duration": 1.0, "texture": SubResource("reach_3")}, {"duration": 1.0, "texture": SubResource("reach_4")}, {"duration": 1.0, "texture": SubResource("reach_5")}, {"duration": 1.0, "texture": SubResource("reach_6")}, {"duration": 1.0, "texture": SubResource("reach_7")}]},
 {"name": &"crouch", "speed": 1, "loop": true, "frames": [{"duration": 1.0, "texture": SubResource("old_12")}]}]

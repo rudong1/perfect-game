@@ -154,10 +154,12 @@ func run() -> void:
 	root.add_child(title)
 	current_scene = title
 	check(title.get_node("Title").text == state.GAME_TITLE, "the title screen uses the poetic game name")
+	check(title.backdrop.texture.resource_path.ends_with("mirror_hands.png"), "the title uses the generated girl-and-reflection illustration")
 	title.name_edit.text = "测试"
 	title.begin_button.pressed.emit()
 	await frames(8)
 	check(current_scene.scene_file_path.ends_with("opening.tscn"), "a new journey preserves the remote prologue")
+	check(current_scene.get_node("Photo").texture.resource_path.ends_with("mirror_hands.png"), "the prologue preserves the illustrated single-palm meeting")
 	check(not mirror.input_enabled and not mirror.mirrored, "prologue keeps gameplay mirroring disabled")
 	var enter := InputEventKey.new()
 	enter.keycode = KEY_ENTER
@@ -259,10 +261,27 @@ func run() -> void:
 
 	var frames_resource: SpriteFrames = player.sprite.sprite_frames
 	check(frames_resource.get_frame_count("run") == 8 and frames_resource.get_frame_count("sprint") == 8, "eight actual run frames replace four-frame motion")
+	var running_texture := frames_resource.get_frame_texture("run", 0) as AtlasTexture
+	check(running_texture.atlas.resource_path.ends_with("hero_run.png"), "locomotion uses the redrawn arm-swing cycle instead of the chest-fist poses")
+	HeroAnimation.play(player.sprite, "run")
+	player.sprite.set_frame_and_progress(4, 0.37)
+	HeroAnimation.play(player.sprite, "sprint")
+	check(player.sprite.frame == 4 and absf(player.sprite.frame_progress - 0.37) < 0.01, "sprinting preserves both arm and leg phase without restarting the stride")
+	var normal_scale: Vector2 = player.sprite.scale
+	var normal_offset: Vector2 = player.sprite.offset
+	player._play("reach")
+	HeroAnimation.play(player.sprite, "reach")
+	check(absf(player.sprite.scale.y) < absf(normal_scale.y) and not frames_resource.get_animation_loop("reach"), "the calm single-palm pose normalizes once and holds instead of looping a push")
+	player._play("idle")
+	check(player.sprite.scale.is_equal_approx(normal_scale) and player.sprite.offset == normal_offset, "returning from the farewell gesture restores the normal actor scale and foot origin")
 	check(frames_resource.get_frame_count("land") >= 3 and frames_resource.has_animation("apex") and frames_resource.has_animation("stop"), "landing, apex and braking transitions exist")
 	for animation in frames_resource.get_animation_names():
 		for i in frames_resource.get_frame_count(animation):
-			check(frames_resource.get_frame_texture(animation, i).get_size() == Vector2(320, 380), "all poses share a stable logical canvas")
+			var frame_texture: AtlasTexture = frames_resource.get_frame_texture(animation, i)
+			var canvas_size := Vector2(400, 500) if animation == &"reach" else Vector2(320, 380)
+			check(frame_texture.get_size() == canvas_size, "each pose uses its stable logical canvas")
+			if animation == &"reach":
+				check(Rect2(Vector2.ZERO, canvas_size).encloses(Rect2(frame_texture.margin.position, frame_texture.region.size)), "the larger farewell canvas contains the entire hair, head and soles")
 	# A translated portal destination is checked against actual world collision.
 	await room(1)
 	var transport: StaticBody2D = game.level_root.get_node("MirrorSlab")
@@ -420,12 +439,33 @@ func run() -> void:
 	check(glass_is_valid, "all clipped glass fragments remain valid renderable polygons")
 	await frames(70)
 	check(chase.phase == chase.Phase.FAREWELL and not chase.shadow.visible, "breaking the mirror makes the pursuing reflection disappear")
-	check(chase._caption.text == "也许，这也算是不错的告别吧。", "the reflection speaks the requested farewell after the chase")
+	check(chase._caption.text.contains("夺走") and chase._memory_glass.visible, "the goodbye begins with the protagonist confronting a reflection retained in a shard")
 	check(not state.is_game_complete(), "the finale waits for the goodbye before marking the journey complete")
 	chase._next.pressed.emit()
-	check(chase._caption.text.contains("darksky") and chase.farewell_index == 1, "darksky is revealed as the reflection's true name only in the final line")
-	chase._next.pressed.emit()
-	await frames(6)
+	check(chase.farewell_index == 0, "the shatter input cannot accidentally skip the opening goodbye beat")
+	var heard_apology := false
+	var heard_response := false
+	var saw_palms := false
+	for i in chase.FAREWELL_BEATS.size():
+		if i < chase.FAREWELL_BEATS.size() - 1:
+			check(not chase._caption.text.contains("darksky"), "the reflection's true name remains hidden through the extended goodbye")
+		if chase._caption.text.contains("对不起"):
+			heard_apology = true
+		if chase._caption.text.contains("没办法说没关系"):
+			heard_response = true
+		if i == chase.FAREWELL_BEATS.size() - 2:
+			check(chase._caption.text == "也许，这也算是不错的告别吧。", "the requested farewell follows their admission and response")
+		if i == chase.FAREWELL_BEATS.size() - 1:
+			check(chase._caption.text.contains("darksky"), "darksky is revealed only in the last line")
+		await frames(75 if i == chase.FAREWELL_BEATS.size() - 1 else 23)
+		if chase.player.current_animation == "reach" and chase._memory.animation == &"reach" and chase._memory_glass.position.x - chase.player.position.x < 125:
+			saw_palms = true
+		if i == chase.FAREWELL_BEATS.size() - 1:
+			check(chase._memory_glass.modulate.a < 0.01 and not state.is_game_complete(), "her image dissolves while the final name remains readable before departure")
+		chase._next.pressed.emit()
+	check(heard_apology and heard_response and saw_palms, "the expanded goodbye includes accountability, the protagonist's response, and the opening palm gesture")
+	check(chase.phase == chase.Phase.DEPARTURE and not state.is_game_complete(), "the protagonist leaves through a transition before the ending is saved")
+	await frames(85)
 	check(state.is_game_complete() and current_scene.scene_file_path.ends_with("ending_screen.tscn"), "leaving the broken mirror completes the narrative ending")
 	check(state.load_from_disk() and state.ending_reached and state.collected_count() == 3 and state.current_level == 4, "completed goodbye and colours round-trip through save")
 	change_scene_to_file("res://scenes/ui/title_screen.tscn")

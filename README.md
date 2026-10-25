@@ -7,8 +7,10 @@ Godot 4.7.2 标准版的 2D 镜像解谜游戏。少女与晚半拍的分身走�
 ## 运行
 
 1. 使用 Godot 4.7.2 标准版导入 `project.godot`，等待素材导入后按 F5。
-2. 输入名字并点击「踏入镜中」，在序章中按 Enter 或点击逐段阅读相遇的故事，再进入游戏。
+2. 输入名字并点击「踏入镜中」，在序章中按 Enter 或点击逐段阅读相遇的故事，再进入游戏。标题与序章使用女孩和倒影隔镜贴掌的哥特插画。
 3. 已有存档可在标题画面选择「继续旅程」。
+
+[标题实机画面](docs/title.png) · [序章实机画面](docs/opening.png)
 
 游戏使用 GDScript，不需要 .NET 或 C# 构建。仓库保留的 Godot-MCP C# 编辑器插件默认关闭；需要该可选插件时，可自行使用 .NET 版编辑器并启用它。
 
@@ -37,6 +39,8 @@ Godot 4.7.2 标准版的 2D 镜像解谜游戏。少女与晚半拍的分身走�
 
 分身延迟 0.42 秒继承水平移动，使用相反重力，不共享跳跃。上下踏板分别标明「本体」和「影子」；双板必须同时被对应角色压住，门才会打开。
 
+跑动与冲刺共用新绘制的八帧摆臂循环，双手随步伐在胸前与身后交替，切换速度时保留动作相位。分帧读取原图的透明行间隔，避免切断鞋子或混入相邻动作；跳跃、落地和推镜姿态保留。
+
 镜面自己的 x 是水平传送轴，出口位置遵循 `Vector2(2 * slab.x - entry.x, entry.y)`。出口被真实碰撞体挡住时会拒绝传送，并显示正向可读的提示。红色关卡要求真正映到接引踏板，先传错再走过去不能代替对准；无色关卡的两段配合之间设有存档。
 
 光束沿实际反射线路抵达对应接收器。M 只转动角色附近的一面镜子；推动立镜会改变遮挡关系。两色接通时显示 2/3 的接近成功反馈，光路被重新遮断后门和收集物会再次锁住。光路状态与左上角的颜色收集进度相互独立。
@@ -59,7 +63,7 @@ Godot 4.7.2 标准版的 2D 镜像解谜游戏。少女与晚半拍的分身走�
 
 终幕先通过过门失败、镜中近景、主角劝阻与倒影走出镜面来完成转折，随后交还移动控制。玩家向右逃跑，可用 Shift 冲刺；镜头、铺路、远景窗廊和近景拱柱共同移动。撞碎巨镜时，原图中的金属镜框与玻璃一起化为带纹理的碎片，倒影随之消散。
 
-告别分两句呈现：「也许，这也算是不错的告别吧。」「……对了，我叫 darksky。」玩家在开场为主角命名，倒影的真名只在结尾揭晓。[完整剧情稿](docs/story.md)，[追逐实机画面](docs/finale.png)。
+碎镜后，最后一片镜面短暂留住倒影。她承认恐惧与伤害并道歉，主角说出自己的感受；两人重现相遇时隔镜贴掌的动作，再以「也许，这也算是不错的告别吧。」「……对了，我叫 darksky。」收束。倒影渐渐消散，主角带着颜色与名字离开。玩家在开场为主角命名，倒影的真名只在最后一句揭晓。[完整剧情稿](docs/story.md)，[追逐实机画面](docs/finale.png)，[告别实机画面](docs/farewell.png)。
 
 追逐中被抓住或按 R 会从追逐入口重试，已经收集的颜色保留。存档点使用小型菱形印记，不再悬挂文字标签。
 
@@ -74,6 +78,6 @@ godot --headless --editor --import --quit
 XDG_DATA_HOME="$(mktemp -d)" godot --headless --fixed-fps 60 --path . --script res://tests/mirror_mechanics.gd
 ```
 
-新美术包括 [追逐远景](assets/backgrounds/chase_far.png)、[透明拱廊](assets/backgrounds/chase_near.png)、[哥特巨镜](assets/props/gothic_mirror.png) 和 [推镜立柱](assets/props/mirror_slab.png)。透明边距通过 AtlasTexture 裁取，原图保持完整。
+新美术包括 [镜前相遇](assets/backgrounds/mirror_hands.png)、[跑步摆臂](assets/characters/hero/hero_run.png)、[单手贴掌](assets/characters/hero/hero_reach.png)、[追逐远景](assets/backgrounds/chase_far.png)、[透明拱廊](assets/backgrounds/chase_near.png)、[哥特巨镜](assets/props/gothic_mirror.png) 和 [推镜立柱](assets/props/mirror_slab.png)。透明边距通过 AtlasTexture 裁取，原图保持完整。
 
 测试覆盖序章对话与命名、分身延迟、镜像重力、安全重定位、翻转文字、推行姿态、入口与接引落位校准、真实传送与阻挡、光束反射与遮挡、四关实际输入通关、三色顺序、过门失败与镜面越界、相机与建筑景深滚动、追逐重试、巨镜碰撞与纹理碎裂、darksky 的告别，以及新旧存档继续流程。背景、字体与界面还通过实际 OpenGL 渲染截图检查。

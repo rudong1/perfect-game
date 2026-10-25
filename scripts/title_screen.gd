@@ -1,21 +1,13 @@
 extends Control
 ## Title and character-name entry.
 
-@onready var backdrop: ColorRect = $Backdrop
+@onready var backdrop: TextureRect = $Backdrop
 @onready var name_edit: LineEdit = $NameEdit
 @onready var begin_button: Button = $Begin
 @onready var continue_button: Button = $Continue
 
 
 func _ready() -> void:
-	var background := ShaderMaterial.new()
-	background.shader = preload("res://shaders/level_backdrop.gdshader")
-	background.set_shader_parameter("top_color", Color("#070707"))
-	background.set_shader_parameter("bottom_color", Color("#191919"))
-	background.set_shader_parameter("accent_color", Color("#e7e7e7"))
-	background.set_shader_parameter("glow_strength", 0.7)
-	backdrop.material = background
-
 	begin_button.pressed.connect(_begin)
 	continue_button.pressed.connect(_continue)
 	var state := get_node_or_null("/root/GameState")

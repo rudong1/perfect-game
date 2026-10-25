@@ -1,6 +1,6 @@
 extends Node2D
 ## The reflection leaves the opposite side. Escape, break the mirror, say goodbye.
-enum Phase { THRESHOLD, CROSSOVER, BETRAYAL, CHASE, SHATTER, FAREWELL }
+enum Phase { THRESHOLD, CROSSOVER, BETRAYAL, CHASE, SHATTER, FAREWELL, DEPARTURE }
 const HERO = preload("res://scenes/player/player.tscn")
 const FRAMES = preload("res://assets/characters/hero/hero_frames.tres")
 const GIANT_MIRROR = preload("res://scripts/final_mirror.gd")
@@ -10,7 +10,18 @@ const MIRROR_X := 3120.0
 const PURSUIT_SPEED := 205.0
 const PLAYER_START := Vector2(350, 900)
 const SHADOW_START := Vector2(130, 900)
-const FAREWELL_LINES := ["也许，这也算是不错的告别吧。", "……对了，我叫 darksky。"]
+const FAREWELL_BEATS := [
+	{"speaker": "hero", "text": "「刚才……你是真的想把我的颜色夺走吗？」"},
+	{"speaker": "reflection", "text": "「是。门亮起来的时候，我以为终于轮到我了。\n可光穿过我的手，我忽然什么都听不见，只剩下害怕。」"},
+	{"speaker": "hero", "text": "「我也害怕。可我一直以为，\n身后那个晚半步的脚步声，是在陪着我。」"},
+	{"speaker": "reflection", "text": "「那是真的。第一次等到你，第一次有人回头找我……\n那些时候，我真的想和你一起出去。」"},
+	{"speaker": "reflection", "text": "「后来，我只顾着不想再被留下，\n竟然想把你也留在这里。……对不起。」"},
+	{"speaker": "hero", "text": "「我现在还没办法说没关系。\n但一起走过的那些路，我也不会当作没有发生。」"},
+	{"speaker": "reflection", "text": "「嗯。把颜色带走吧。\n别为了等我，错过外面的天亮。」", "opacity": 0.32},
+	{"speaker": "hero", "text": "你再次抬起手，贴向那片尚未落下的镜面。\n「那至少告诉我……你的名字。」", "gesture": true, "opacity": 0.24},
+	{"speaker": "reflection", "text": "也许，这也算是不错的告别吧。", "gesture": true, "opacity": 0.16},
+	{"speaker": "reflection", "text": "……对了，我叫 darksky。", "gesture": true, "opacity": 0.0},
+]
 const REVELATION_BEATS := [
 	{"speaker": "门前", "text": "镜门终于回应了{name}。\n她也伸出手，光却穿过了她的掌心。"},
 	{"speaker": "与你同行的女孩", "text": "「原来，回来的只是教堂的颜色。\n我被留在这里太久了……已经不算活着的人。」"},
@@ -41,6 +52,9 @@ var _speaker: Label
 var _objective: Label
 var _next: Button
 var _flash: ColorRect
+var _memory: AnimatedSprite2D
+var _memory_glass: Polygon2D
+var _memory_tween: Tween
 
 func _ready() -> void:
 	_state = get_node("/root/GameState")
@@ -112,6 +126,30 @@ func _build_actors() -> void:
 	_sprite.modulate = Color(0.7, 0.8, 0.9, 0.95)
 	_sprite.play("idle")
 	shadow.add_child(_sprite)
+	# A final image held in a shard, separate from the pursuing actor.
+	_memory_glass = Polygon2D.new()
+	_memory_glass.position = Vector2(MIRROR_X - 30, 900)
+	_memory_glass.polygon = PackedVector2Array([Vector2(-88, 0), Vector2(-84, -187), Vector2(24, -229), Vector2(86, -72), Vector2(56, 0)])
+	_memory_glass.color = Color(0.55, 0.66, 0.73, 0.14)
+	_memory_glass.visible = false
+	add_child(_memory_glass)
+	var shard_edge := Line2D.new()
+	shard_edge.points = _memory_glass.polygon
+	shard_edge.add_point(_memory_glass.polygon[0])
+	shard_edge.width = 1.5
+	shard_edge.default_color = Color(0.78, 0.85, 0.92, 0.26)
+	shard_edge.antialiased = true
+	_memory_glass.add_child(shard_edge)
+	_memory = AnimatedSprite2D.new()
+	_memory.sprite_frames = FRAMES
+	_memory.centered = false
+	_memory.offset = _sprite.offset
+	_memory.scale = _sprite.scale
+	_memory.flip_h = true
+	_memory.material = tint
+	_memory.modulate = Color(0.7, 0.8, 0.9, 0)
+	_memory.play("idle")
+	_memory_glass.add_child(_memory)
 
 func _label(parent: Node, point: Vector2, size: Vector2, text: String, font_size: int) -> Label:
 	var label := Label.new()
@@ -167,7 +205,8 @@ func _build_ui() -> void:
 func _physics_process(delta: float) -> void:
 	_clock += delta
 	_scene_time += delta
-	_veil.color.a = maxf(0, 1.0 - _scene_time / 0.7)
+	if phase != Phase.DEPARTURE:
+		_veil.color.a = maxf(0, 1.0 - _scene_time / 0.7)
 	match phase:
 		Phase.CROSSOVER:
 			var t := clampf(_clock / 1.3, 0, 1)
@@ -274,7 +313,7 @@ func _retry() -> void:
 	_objective.text = "按 D / → 向右重试，Shift 冲刺。已经找到的颜色会保留。"
 
 func _break_mirror() -> void:
-	if phase == Phase.SHATTER or phase == Phase.FAREWELL:
+	if phase in [Phase.SHATTER, Phase.FAREWELL, Phase.DEPARTURE]:
 		return
 	phase = Phase.SHATTER
 	_clock = 0
@@ -283,7 +322,7 @@ func _break_mirror() -> void:
 	player._play("push")
 	mirror_body.shatter()
 	_dialogue.visible = false
-	_objective.text = "巨镜碎裂。身后的倒影，也随着裂纹消失了。"
+	_objective.text = "巨镜碎裂。追赶你的脚步停了，碎片里却还留着她的轮廓。"
 
 func _show_farewell() -> void:
 	phase = Phase.FAREWELL
@@ -291,24 +330,58 @@ func _show_farewell() -> void:
 	shadow.visible = false
 	player._play("idle")
 	_dialogue.visible = true
-	_speaker.text = "碎镜中传来的声音"
 	farewell_index = 0
-	_caption.text = FAREWELL_LINES[0]
-	_next.text = "继续"
 	_next.visible = true
-	_objective.text = "你保住了颜色。镜面后，只剩最后一句话。"
+	_clock = 0
+	_memory_glass.visible = true
+	_memory_glass.modulate.a = 0.5
+	_memory.modulate.a = 1.0
+	_show_farewell_beat()
+	_objective.text = "最后一片镜子映着她。你们之间，再也没有追赶的脚步声。"
+
+func _show_farewell_beat() -> void:
+	var beat: Dictionary = FAREWELL_BEATS[farewell_index]
+	_speaker.text = _state.player_name if beat.speaker == "hero" else "最后一片镜中的女孩"
+	_caption.text = beat.text
+	_next.text = "走向天亮" if farewell_index == FAREWELL_BEATS.size() - 1 else "继续"
+	if beat.get("gesture", false):
+		player._play("reach")
+		HeroAnimation.play(_memory, "reach")
+	if beat.has("opacity"):
+		if _memory_tween != null and _memory_tween.is_running():
+			_memory_tween.kill()
+		_memory_tween = create_tween().set_parallel(true)
+		_memory_tween.tween_property(_memory_glass, "modulate:a", beat.opacity, 1.1)
+		if beat.get("gesture", false):
+			_memory_tween.tween_property(_memory_glass, "position:x", player.position.x + 84, 0.7)
+	if farewell_index == FAREWELL_BEATS.size() - 1:
+		_speaker.text = "消散前，她把名字留给了你"
 
 func _advance_farewell() -> void:
-	if phase != Phase.FAREWELL:
+	if phase != Phase.FAREWELL or _clock < 0.35:
 		return
-	if farewell_index + 1 < FAREWELL_LINES.size():
+	_clock = 0
+	if farewell_index + 1 < FAREWELL_BEATS.size():
 		farewell_index += 1
-		_caption.text = FAREWELL_LINES[farewell_index]
-		_speaker.text = "她终于说出了自己的名字"
-		_next.text = "离开镜面"
+		_show_farewell_beat()
 	else:
-		_state.complete_journey()
-		get_tree().change_scene_to_file("res://scenes/ui/ending_screen.tscn")
+		_leave_mirror()
+
+func _leave_mirror() -> void:
+	phase = Phase.DEPARTURE
+	_next.disabled = true
+	_dialogue.visible = false
+	_objective.text = "你带着颜色，也带着那个名字，走向天亮。"
+	player.facing = 1
+	player.sprite.flip_h = false
+	player._play("run")
+	player.sprite.speed_scale = HeroAnimation.cadence("run", 80)
+	var departure := create_tween().set_parallel(true)
+	departure.tween_property(player, "position:x", player.position.x + 100, 1.25)
+	departure.tween_property(_veil, "color:a", 1.0, 0.85).set_delay(0.4)
+	await departure.finished
+	_state.complete_journey()
+	get_tree().change_scene_to_file("res://scenes/ui/ending_screen.tscn")
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_echo():
@@ -316,7 +389,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if OS.is_debug_build() and event.is_action_pressed("developer_skip"):
 		_break_mirror()
 		get_viewport().set_input_as_handled()
-	elif event.is_action_pressed("restart_room") and phase != Phase.FAREWELL:
+	elif event.is_action_pressed("restart_room") and phase not in [Phase.FAREWELL, Phase.DEPARTURE]:
 		_retry()
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("ui_accept") and phase in [Phase.THRESHOLD, Phase.FAREWELL]:

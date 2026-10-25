@@ -1,6 +1,5 @@
 extends Control
-## Prologue: the cathedral photo fills the screen and the lancet window in its
-## middle is the mirror. No character here — just the place, waiting.
+## The two girls touch one palm through the mirror; the farewell recalls it.
 
 const NEXT_SCENE := "res://scenes/gameplay/gameplay.tscn"
 const STORY_LINES := [
@@ -26,6 +25,11 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	caption.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_gate_material = gate.material as ShaderMaterial
+	var photo := $Photo as Sprite2D
+	var source_size := photo.texture.get_size()
+	var cover := maxf(1920.0 / source_size.x, 1080.0 / source_size.y)
+	photo.scale = Vector2.ONE * cover
+	gate.scale = photo.scale
 	# This is not the mirror world yet; keep M from flipping the frame.
 	var mirror := get_node_or_null("/root/MirrorState")
 	if mirror != null:
@@ -34,13 +38,13 @@ func _ready() -> void:
 	caption.modulate.a = 1.0
 	fade.color = Color(0, 0, 0, 0)
 	var shade := ColorRect.new()
-	shade.position = Vector2(0, 735)
-	shade.size = Vector2(1920, 345)
-	shade.color = Color(0.02, 0.025, 0.035, 0.9)
+	shade.position = Vector2(0, 790)
+	shade.size = Vector2(1920, 290)
+	shade.color = Color(0.02, 0.025, 0.035, 0.86)
 	shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(shade)
 	move_child(shade, caption.get_index())
-	caption.position = Vector2(200, 792)
+	caption.position = Vector2(200, 822)
 	caption.size = Vector2(1520, 150)
 	caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	caption.add_theme_font_size_override("font_size", 28)
