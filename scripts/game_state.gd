@@ -8,7 +8,7 @@ signal checkpoint_saved(position: Vector2)
 
 const MAX_LEVELS := 4
 const COLOR_COUNT := 3
-const SAVE_VERSION := 7
+const SAVE_VERSION := 8
 const SAVE_PATH := "user://mirror_save.cfg"
 const GAME_TITLE := "镜尽余色"
 const PALETTE = preload("res://scripts/palette.gd")
@@ -93,6 +93,10 @@ var ending_reached := false
 var offered_mask := 0
 var darksky_revived := false
 var run_active := false
+## Set while the revelation has closed the mirror and the title menu is locked.
+var mirror_sealed := false
+## True once the player has read the revelation and may enter the mirror again.
+var revelation_done := false
 
 func _ready() -> void:
 	# Keep the internal project/save identity stable while renaming the game.
@@ -118,6 +122,8 @@ func begin_game(name: String) -> void:
 	ending_reached = false
 	offered_mask = 0
 	darksky_revived = false
+	mirror_sealed = false
+	revelation_done = false
 	clear_save()
 	run_active = true
 	changed.emit()
@@ -213,10 +219,14 @@ func load_from_disk() -> bool:
 	var version := int(config.get_value("game", "version", 1))
 	# The new reunion restores her own face and includes the embrace. Older
 	# completed rescues resume there, retaining the gift instead of spending twice.
-	ending_reached = bool(config.get_value("game", "ending_reached", false)) if version >= SAVE_VERSION else false
+	ending_reached = bool(config.get_value("game", "ending_reached", false)) if version >= 7 else false
 	collected_mask = int(config.get_value("game", "collected_mask", (1 << mini(current_level, COLOR_COUNT)) - 1)) & 7
 	offered_mask = int(config.get_value("game", "offered_mask", 0)) & 7 if version >= 6 else 0
 	darksky_revived = bool(config.get_value("game", "darksky_revived", false)) and has_offered_colors() if version >= 6 else false
+	mirror_sealed = bool(config.get_value("game", "mirror_sealed", false)) if version >= 8 else false
+	revelation_done = bool(config.get_value("game", "revelation_done", false)) if version >= 8 else false
+	if mirror_sealed:
+		revelation_done = true
 	if has_offered_colors():
 		collected_mask = 0
 	ending_reached = ending_reached and darksky_revived
@@ -227,7 +237,7 @@ func load_from_disk() -> bool:
 	if version < 6 and current_level < 2:
 		has_checkpoint = false
 		checkpoint_stage = 0
-	if version < SAVE_VERSION and current_level in [2, 3]:
+	if version < 7 and current_level in [2, 3]:
 		has_checkpoint = false
 		checkpoint_stage = 0
 	end_light_puzzle()
@@ -240,9 +250,28 @@ func persist_run() -> void:
 	if run_active:
 		_save_game()
 
+func seal_mirror() -> void:
+	# The revelation ends by closing the mirror and dropping the player home.
+	revelation_done = true
+	mirror_sealed = true
+	_save_game()
+
+func open_mirror() -> void:
+	# Holding M on the locked start screen reopens the way into the finale.
+	mirror_sealed = false
+	revelation_done = true
+	_save_game()
+
+func is_sealed_save() -> bool:
+	# Read-only probe used by the start screen before loading the whole run.
+	var config := ConfigFile.new()
+	if config.load(SAVE_PATH) != OK:
+		return false
+	return bool(config.get_value("game", "mirror_sealed", false))
+
 func _save_game() -> void:
 	var config := ConfigFile.new()
-	for key in ["player_name", "current_level", "collected_mask", "checkpoint_stage", "checkpoint_level", "checkpoint_position", "has_checkpoint", "ending_reached", "offered_mask", "darksky_revived"]:
+	for key in ["player_name", "current_level", "collected_mask", "checkpoint_stage", "checkpoint_level", "checkpoint_position", "has_checkpoint", "ending_reached", "offered_mask", "darksky_revived", "mirror_sealed", "revelation_done"]:
 		config.set_value("game", key, get(key))
 	config.set_value("game", "version", SAVE_VERSION)
 	var err := config.save(SAVE_PATH)

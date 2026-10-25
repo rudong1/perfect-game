@@ -96,8 +96,15 @@ func _ready() -> void:
 		else:
 			_begin_fusion()
 		return
+	if _state.mirror_sealed:
+		# The revelation closed the mirror; only the start screen may reopen it.
+		get_tree().change_scene_to_file.call_deferred("res://scenes/ui/title_screen.tscn")
+		return
 	shadow.position = Vector2(PLAYER_START.x - 90, 180)
 	shadow.scale.y = -1
+	if _state.revelation_done:
+		_begin_crossover()
+		return
 	_show_revelation()
 
 func _build_world() -> void:
@@ -335,11 +342,7 @@ func _advance_dialogue() -> void:
 			revelation_index += 1
 			_show_revelation()
 		else:
-			phase = Phase.CROSSOVER
-			_next.visible = false
-			_speaker.text = "镜面泛起最后一次涟漪"
-			_caption.text = "她松开了镜中的门环，向你走来。\n那条始终隔在你们之间的边界，正在消失。"
-			_objective.text = "那个一直与你同行的倒影，走出了镜面。"
+			_seal_mirror_to_title()
 	elif phase == Phase.CONFESSION:
 		_advance_confession()
 	elif phase == Phase.REUNION and _clock >= 0.35:
@@ -349,6 +352,26 @@ func _advance_dialogue() -> void:
 			_show_reunion_beat()
 		else:
 			_leave_mirror()
+
+func _seal_mirror_to_title() -> void:
+	# The revelation ends by shutting the mirror: the player is sent home and
+	# must find a way back in from the locked start screen.
+	_next.visible = false
+	_dialogue.visible = false
+	_objective.text = "镜门在你面前合上。你需要想办法，再次进入镜面。"
+	_state.call("seal_mirror")
+	_veil.color.a = 0.0
+	var fade := create_tween()
+	fade.tween_property(_veil, "color:a", 1.0, 0.55)
+	await fade.finished
+	get_tree().change_scene_to_file("res://scenes/ui/title_screen.tscn")
+
+func _begin_crossover() -> void:
+	phase = Phase.CROSSOVER
+	_next.visible = false
+	_speaker.text = "镜面泛起最后一次涟漪"
+	_caption.text = "她松开了镜中的门环，向你走来。\n那条始终隔在你们之间的边界，正在消失。"
+	_objective.text = "那个一直与你同行的倒影，走出了镜面。"
 
 func _start_chase() -> void:
 	phase = Phase.CHASE

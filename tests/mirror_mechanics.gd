@@ -268,9 +268,30 @@ func prepare_chase(scene: Node2D) -> void:
 		if i == 1:
 			check(scene._caption.text.contains("不算活着") and not scene._caption.text.contains("darksky"), "her failed passage explains the missing living colour before revealing her name")
 		scene._next.pressed.emit()
-	check(scene.phase == scene.Phase.CROSSOVER, "the request for colour leads into a visible crossing of the mirror boundary")
+	await frames(45)
+	check(current_scene.scene_file_path.ends_with("title_screen.tscn") and state.mirror_sealed, "the revelation forces the player back to the sealed start screen")
+	var sealed: Control = current_scene
+	check(sealed.begin_button.disabled and sealed.continue_button.disabled, "start and continue stay locked while the mirror is sealed")
+	check(sealed.hint.text == "你需要找到办法进入镜面" and sealed.hint.modulate.r > sealed.hint.modulate.g, "the sealed screen shows the pale red hint")
+	var hold := InputEventKey.new()
+	hold.keycode = KEY_M
+	hold.physical_keycode = KEY_M
+	hold.pressed = true
+	Input.parse_input_event(hold)
+	await frames(20)
+	check(sealed._anomaly_mat.get_shader_parameter("amount") > 0.0, "holding M stirs a restrained screen anomaly")
+	await frames(95)
+	var release := InputEventKey.new()
+	release.keycode = KEY_M
+	release.physical_keycode = KEY_M
+	release.pressed = false
+	Input.parse_input_event(release)
+	await frames(45)
+	check(current_scene.scene_file_path.ends_with("finale.tscn") and not state.mirror_sealed and state.revelation_done, "holding M reopens the mirror and resumes the finale")
+	var resumed: Node2D = current_scene
+	check(resumed.phase == resumed.Phase.CROSSOVER, "the reopened finale crosses the mirror boundary instead of replaying the revelation")
 	await frames(85)
-	check(scene.phase == scene.Phase.BETRAYAL and scene.shadow.scale.y > 0 and scene.shadow.position.x < scene.player.position.x, "the companion visibly reaches the same floor behind the protagonist")
+	check(resumed.phase == resumed.Phase.BETRAYAL and resumed.shadow.scale.y > 0 and resumed.shadow.position.x < resumed.player.position.x, "the companion visibly reaches the same floor behind the protagonist")
 
 func run() -> void:
 	await process_frame
@@ -627,6 +648,7 @@ func run() -> void:
 	check(not Geometry2D.triangulate_polygon(chase.mirror_body._outline).is_empty(), "the generated mirror has valid fragmentation bounds")
 	check(chase.mirror_body._graphic.texture is AtlasTexture, "the giant mirror uses the generated Gothic artwork")
 	await prepare_chase(chase)
+	chase = current_scene
 	await frames(50)
 	Input.action_press("move_right")
 	await frames(40)
