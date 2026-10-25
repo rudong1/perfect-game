@@ -110,6 +110,7 @@ XDG_DATA_HOME="$(mktemp -d)" godot --headless --audio-driver Dummy --path . --sc
 
 ## 开发文档
 
+- [游戏流程总览](docs/game_flow.md)：从启动到结局的完整流程图、四关流程、终幕相位、存档/恢复与分支汇总。
 - [项目框架说明](docs/framework.md)：分层架构、autoload 单例、场景流转、核心玩法、脚本索引与已知技术债。
 - [MCP 测试报告](docs/mcp-test.md)：Godot-MCP 配置与 26 项测试矩阵、端口分裂根因，以及已落地的 `.env` 修复与复测结果。
 
