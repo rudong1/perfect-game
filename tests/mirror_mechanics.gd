@@ -314,7 +314,7 @@ func run() -> void:
 	var player: CharacterBody2D = game.player
 	var shadow: CharacterBody2D = game.echo
 	check(shadow.global_position.distance_to(mirror.reflect_point(player.global_position)) < 1, "shadow starts across shared mirror axis")
-	check(shadow.hint.text.contains("影子") and shadow.sprite.material != null, "shadow has a distinct tint and readable identity")
+	check(shadow.sprite.material != null, "shadow retains its distinct smoky tint")
 	check(_heard.is_empty(), "title, prologue and initial mirror setup stay quiet")
 	await press_key(KEY_M)
 	check(mirror.mirrored and _heard.count(&"mirror_flip") == 1, "an actual successful M flip plays exactly one glass-and-air cue")

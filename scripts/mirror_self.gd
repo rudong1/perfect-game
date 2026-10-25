@@ -19,7 +19,6 @@ var _history: Array = []
 var _trail: Array[Vector2] = []
 var _ghosts: Array[Sprite2D] = []
 var _trail_time := 0.0
-var hint: CanvasLayer
 
 func _ready() -> void:
 	add_to_group("mirror_actors")
@@ -54,12 +53,6 @@ func _ready() -> void:
 	_mirror.mirror_changed.connect(_on_mirror_changed)
 	_mirror.axis_changed.connect(func(_axis: float) -> void: reset_echo.call_deferred())
 	source.respawned.connect(func() -> void: reset_echo.call_deferred())
-	hint = CanvasLayer.new()
-	hint.set_script(preload("res://scripts/readable_hint.gd"))
-	hint.target = self
-	hint.text = "镜中的女孩 · 影子晚一步跟随"
-	hint.tint = Color("#e4e4e4")
-	add_child(hint)
 	reset_echo()
 
 func reset_echo() -> void:
@@ -104,7 +97,6 @@ func _physics_process(delta: float) -> void:
 		animation = "apex" if absf(velocity.y) < 85 else ("jump" if velocity.y * gravity_sign < 0 else "fall")
 	HeroAnimation.play(sprite, animation)
 	sprite.speed_scale = HeroAnimation.cadence(animation, absf(velocity.x))
-	hint.world_offset = Vector2(0, -232 * gravity_sign)
 	_trail_time += delta
 	if _trail_time >= 0.1:
 		_trail_time = 0.0

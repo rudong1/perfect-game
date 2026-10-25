@@ -11,9 +11,11 @@ const CIRCUIT = preload("res://scripts/prism_circuit.gd")
 const REGION_DRESSING = preload("res://scripts/region_dressing.gd")
 const WORLD_WIDTH := 1920.0
 var _palette: Dictionary
+var _show_plate_roles := true
 
 func build(index: int, parent: Node2D) -> Dictionary:
 	_palette = get_node("/root/GameState").get_level(index)
+	_show_plate_roles = index == 0
 	for child in parent.get_children():
 		child.free()
 	get_node("/root/GameState").end_light_puzzle()
@@ -69,8 +71,8 @@ func build(index: int, parent: Node2D) -> Dictionary:
 			var slab := _slab(parent)
 			var final_duet := _light_step(parent, slab, true)
 			final_duet.kind = "transit_paired_prism"
-			final_duet.plates.append(_plate(parent, 1390, false, false, "同行踏板 · 本体"))
-			final_duet.plates.append(_plate(parent, 1530, true, true, "同行踏板 · 影子"))
+			final_duet.plates.append(_plate(parent, 1390, false, false))
+			final_duet.plates.append(_plate(parent, 1530, true, true))
 			final_duet.hint = "让影子开启三枚封印，带她穿镜，接通三色；最后回地面折返，共同压住出口双板。"
 			steps.append(final_duet)
 	_platform(parent, Vector2(-40, 180), Vector2(40, 720))
@@ -139,7 +141,8 @@ func _plate(parent: Node2D, x: float, ceiling: bool, shadow: bool, caption: Stri
 	else:
 		_plate_visual(area, shape.size, tint)
 	parent.add_child(area)
-	_hint(area, caption if not caption.is_empty() else ("影子踏板" if shadow else "本体踏板"), Vector2(0, (92 if compact else 54) if ceiling else (-92 if compact else -52)), tint)
+	if _show_plate_roles or not caption.is_empty():
+		_hint(area, caption if not caption.is_empty() else ("影子踏板" if shadow else "本体踏板"), Vector2(0, (92 if compact else 54) if ceiling else (-92 if compact else -52)), tint)
 	return area
 
 func _fragment(parent: Node2D, is_exit: bool) -> Area2D:
