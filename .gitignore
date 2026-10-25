@@ -7,3 +7,6 @@
 
 # Godot-MCP 本地编辑器连接配置（每台机器可不同；模板见 .env.example）
 .env
+
+# 本地打包产物（EXE/APK 不入库）
+dist/
