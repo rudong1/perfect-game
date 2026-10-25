@@ -11,13 +11,21 @@ var _paths: Array = []
 var _player: CharacterBody2D
 var _state: Node
 var _mirror_hints: Array[CanvasLayer] = []
+var shadow_locks: Array[Area2D] = []
 
 func _ready() -> void:
+	# The existing beam budget is reserved globally; these are three additional
+	# shutter draw calls, one for each shadow-operated source.
+	add_to_group("gothic_visuals")
+	set_meta("draw_calls", 3)
+	set_meta("bounds", Rect2(0, 180, 1920, 720))
 	_player = get_tree().get_first_node_in_group("player")
 	_state = get_node("/root/GameState")
 	_state.begin_light_puzzle()
 	for i in 3:
-		_mirror_hints.append(_hint(mirrors[i] + Vector2(0, 92), "", COLORS[i]))
+		var hint := _hint(mirrors[i], "", COLORS[i])
+		hint.world_offset = Vector2(0, 92 if get_node("/root/MirrorState").mirrored else -80)
+		_mirror_hints.append(hint)
 		_hint(Vector2(mirrors[i].x, 230), ["红", "绿", "蓝"][i] + "色接收器", COLORS[i])
 	get_node("/root/MirrorState").mirror_changed.connect(_on_flip)
 	get_node("/root/MirrorState").reset_requested.connect(reset)
@@ -28,6 +36,15 @@ func reset() -> void:
 
 func channel_count() -> int:
 	return int(bool(channel_mask & 1)) + int(bool(channel_mask & 2)) + int(bool(channel_mask & 4))
+
+func source_unlocked(channel: int) -> bool:
+	return shadow_locks.is_empty() or shadow_locks[channel].is_activated
+
+func unlocked_source_count() -> int:
+	var count := 0
+	for channel in 3:
+		count += int(source_unlocked(channel))
+	return count
 
 func _on_flip(_mirrored: bool) -> void:
 	if _player.is_physics_processing() and get_node("/root/MirrorState").input_enabled:
@@ -51,6 +68,7 @@ func _physics_process(_delta: float) -> void:
 	select_nearest()
 	for i in 3:
 		_mirror_hints[i].text = ["红", "绿", "蓝"][i] + " · 反射镜" + (" · 按 M 转动" if selected == i else "")
+		_mirror_hints[i].world_offset = Vector2(0, 92 if get_node("/root/MirrorState").mirrored else -80)
 	update_beams()
 
 func _hint(point: Vector2, text: String, tint: Color) -> CanvasLayer:
@@ -74,6 +92,9 @@ func update_beams() -> void:
 	_paths.clear()
 	for channel in 3:
 		var start := mirrors[channel] - Vector2(300, 0)
+		if not source_unlocked(channel):
+			_paths.append(PackedVector2Array([start, start + Vector2(80, 0)]))
+			continue
 		var direction := Vector2.RIGHT
 		var points := PackedVector2Array([start])
 		var previous := -1
@@ -141,3 +162,9 @@ func _draw() -> void:
 		draw_circle(Vector2(mirrors[i].x, 260), 20, color if channel_mask & (1 << i) else Color(color, 0.15))
 		var source := mirrors[i] - Vector2(300, 0)
 		draw_colored_polygon(PackedVector2Array([source + Vector2(-16, -22), source + Vector2(14, 0), source + Vector2(-16, 22)]), Color(color, 0.6))
+		if not shadow_locks.is_empty():
+			var gate := source + Vector2(80, 0)
+			var bars := PackedVector2Array([gate + Vector2(-8, -20), gate + Vector2(-8, 20), gate + Vector2(8, -20), gate + Vector2(8, 20)])
+			if source_unlocked(i):
+				bars = PackedVector2Array([gate + Vector2(-12, -20), gate + Vector2(-12, -10), gate + Vector2(12, 10), gate + Vector2(12, 20)])
+			draw_multiline(bars, Color("#C8CDD6"), 3, true)

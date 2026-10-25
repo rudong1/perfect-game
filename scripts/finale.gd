@@ -1,6 +1,6 @@
 extends Node2D
 ## Fear leads to a chase; freely giving the three colours restores a life.
-enum Phase { THRESHOLD, CROSSOVER, BETRAYAL, CHASE, SHATTER, CONFESSION, FUSION, REUNION, DEPARTURE }
+enum Phase { THRESHOLD, CROSSOVER, BETRAYAL, CHASE, SHATTER, CONFESSION, FUSION, REUNION, EMBRACE, DEPARTURE }
 const HERO = preload("res://scenes/player/player.tscn")
 const FRAMES = preload("res://assets/characters/hero/hero_frames.tres")
 const GIANT_MIRROR = preload("res://scripts/final_mirror.gd")
@@ -11,7 +11,10 @@ const PURSUIT_SPEED := 205.0
 const PLAYER_START := Vector2(350, 900)
 const SHADOW_START := Vector2(130, 900)
 const REVIVAL_CG = preload("res://assets/backgrounds/ending_revival.png")
+const EMBRACE_CG = preload("res://assets/backgrounds/ending_embrace.png")
+const DARKSKY_FRAMES = preload("res://assets/characters/darksky/darksky_frames.tres")
 const FUSION_DURATION := 4.2
+const EMBRACE_DURATION := 2.2
 const CONFESSION_BEATS := [
 	{"speaker": "镜背的刻痕", "text": "碎裂的镜框背后，露出一行旧字：\n「夺来的色彩只能造出倒影，赠予的色彩才能唤回生命。」"},
 	{"speaker": "reflection", "text": "「我也曾和你一样，是个掉进来的女孩。\n可我始终解不开出口，等到最后，连自己的身体都褪去了。」"},
@@ -23,9 +26,11 @@ const CONFESSION_BEATS := [
 	{"speaker": "hero", "text": "「这些颜色，是我们一起找回来的。\n这一次，换我把你带回来。」", "gesture": true},
 ]
 const REUNION_BEATS := [
-	{"speaker": "两个人的脚步", "text": "三色从你的掌心离开，在她心口汇成完整的光。\n指尖有了温度，石地上，终于落下第二道真实的影子。"},
-	{"speaker": "reflection", "text": "「原来……被人握住手，是这样的感觉。\n我以为自己早就忘记了。」"},
-	{"speaker": "hero", "text": "「这一次，不用谁等在镜子里了。\n我们一起走。还有……我还不知道你的名字。」"},
+	{"speaker": "不再是倒影", "text": "镜光褪去，她终于恢复了自己的容貌。\n墨蓝短发垂在颊边，含泪的蓝眼睛小心地望向你。"},
+	{"speaker": "reflection", "text": "「我不是你的倒影了……你还会认得我吗？\n能不能，再让我靠近一点？」"},
+	{"speaker": "终于触碰到的温度", "text": "你张开双臂，她终于在你怀里卸下了颤抖。\n这一次，没有镜面，也没有谁再晚半拍。", "embrace": true},
+	{"speaker": "reflection", "text": "「原来，被人抱住是这样的感觉。\n我以为……自己再也等不到了。」"},
+	{"speaker": "hero", "text": "「以后不用一个人等了。我们一起走。\n还有……这次，我想知道你真正的名字。」"},
 	{"speaker": "reflection", "text": "……对了，我叫 darksky。"},
 ]
 const REVELATION_BEATS := [
@@ -64,6 +69,8 @@ var _memory: AnimatedSprite2D
 var _memory_glass: Polygon2D
 var _memory_tween: Tween
 var _cg: TextureRect
+var _cg_transition: Tween
+var _topshade: ColorRect
 
 func _ready() -> void:
 	_state = get_node("/root/GameState")
@@ -198,6 +205,7 @@ func _build_ui() -> void:
 	layer.layer = 120
 	add_child(layer)
 	var top := ColorRect.new()
+	_topshade = top
 	top.size = Vector2(1920, 155)
 	top.color = Color(0.025, 0.03, 0.035, 0.9)
 	top.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -273,9 +281,15 @@ func _physics_process(delta: float) -> void:
 			backdrop.set_desaturation(t)
 			_memory_glass.modulate.a = lerpf(0.4, 1.0, t)
 			_cg.modulate.a = smoothstep(0.62, 1.0, t)
+			_topshade.modulate.a = 1.0 - _cg.modulate.a
 			if _clock >= FUSION_DURATION:
 				_state.revive_darksky()
 				_show_reunion()
+		Phase.EMBRACE:
+			if _clock >= EMBRACE_DURATION:
+				phase = Phase.REUNION
+				_clock = 0
+				_next.visible = true
 	var focus := clampf(player.position.x, 960, CORRIDOR_WIDTH - 960)
 	if phase == Phase.THRESHOLD and revelation_index in [1, 2]:
 		focus = CORRIDOR_WIDTH - 960
@@ -360,7 +374,7 @@ func _retry() -> void:
 	_objective.text = "按 D / → 向右重试，Shift 冲刺。已经找到的颜色会保留。"
 
 func _break_mirror() -> void:
-	if phase in [Phase.SHATTER, Phase.CONFESSION, Phase.FUSION, Phase.REUNION, Phase.DEPARTURE]:
+	if phase in [Phase.SHATTER, Phase.CONFESSION, Phase.FUSION, Phase.REUNION, Phase.EMBRACE, Phase.DEPARTURE]:
 		return
 	phase = Phase.SHATTER
 	_clock = 0
@@ -454,10 +468,20 @@ func _show_reunion() -> void:
 	_memory.material = null
 	_memory.modulate = Color.WHITE
 	_memory.flip_h = true
-	HeroAnimation.play(_memory, "idle")
+	# The mirror had borrowed the heroine's face. Life returns her own identity.
+	_memory.stop()
+	_memory.sprite_frames = DARKSKY_FRAMES
+	_memory.offset = -Vector2(DARKSKY_FRAMES.get_meta("foot_origin"))
+	_memory.scale = Vector2.ONE * (174.0 / float(DARKSKY_FRAMES.get_meta("stand_height")))
+	for key in ["hero_pose_scale", "hero_pose_offset"]:
+		if _memory.has_meta(key):
+			_memory.remove_meta(key)
+	_memory.play("idle")
 	player._play("idle")
 	backdrop.set_desaturation(1)
 	_cg.modulate.a = 1
+	_cg.texture = REVIVAL_CG
+	_topshade.modulate.a = 0
 	_cg_dialogue_layout()
 	_dialogue.visible = true
 	_next.visible = true
@@ -469,6 +493,25 @@ func _show_reunion_beat() -> void:
 	_speaker.text = _state.player_name if beat.speaker == "hero" else ("重获身体的女孩" if beat.speaker == "reflection" else beat.speaker)
 	_caption.text = beat.text
 	_next.text = "一起走出镜面" if reunion_index == REUNION_BEATS.size() - 1 else "继续"
+	if beat.get("embrace", false):
+		_start_embrace()
+
+func _start_embrace() -> void:
+	phase = Phase.EMBRACE
+	_clock = 0
+	_next.visible = false
+	_chapter.text = "终幕 · 不再隔着镜面"
+	_objective.text = "她终于能够拥抱你，而不再只是映出你的模样。"
+	player._play("reach")
+	_memory.play("hug")
+	var approach := create_tween()
+	approach.tween_property(_memory_glass, "position:x", player.position.x + 35, 0.8).set_trans(Tween.TRANS_SINE)
+	if _cg_transition != null and _cg_transition.is_running():
+		_cg_transition.kill()
+	_cg_transition = create_tween()
+	_cg_transition.tween_property(_cg, "modulate:a", 0.0, 0.3)
+	_cg_transition.tween_callback(func() -> void: _cg.texture = EMBRACE_CG)
+	_cg_transition.tween_property(_cg, "modulate:a", 1.0, 0.55)
 
 func _leave_mirror() -> void:
 	phase = Phase.DEPARTURE
@@ -480,11 +523,11 @@ func _leave_mirror() -> void:
 	player._play("run")
 	player.sprite.speed_scale = HeroAnimation.cadence("run", 80)
 	_memory.flip_h = false
-	HeroAnimation.play(_memory, "run")
+	_memory.play("run")
 	_memory.speed_scale = HeroAnimation.cadence("run", 80)
 	var departure := create_tween().set_parallel(true)
 	departure.tween_property(player, "position:x", player.position.x + 100, 1.25)
-	departure.tween_property(_memory_glass, "position:x", _memory_glass.position.x + 100, 1.25)
+	departure.tween_property(_memory_glass, "position:x", player.position.x + 184, 1.25)
 	departure.tween_property(_cg, "modulate:a", 0.0, 0.35)
 	departure.tween_property(_veil, "color:a", 1.0, 0.85).set_delay(0.4)
 	await departure.finished
@@ -497,7 +540,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if OS.is_debug_build() and event.is_action_pressed("developer_skip"):
 		_break_mirror()
 		get_viewport().set_input_as_handled()
-	elif event.is_action_pressed("restart_room") and phase not in [Phase.CONFESSION, Phase.FUSION, Phase.REUNION, Phase.DEPARTURE]:
+	elif event.is_action_pressed("restart_room") and phase not in [Phase.CONFESSION, Phase.FUSION, Phase.REUNION, Phase.EMBRACE, Phase.DEPARTURE]:
 		_retry()
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("ui_accept") and phase in [Phase.THRESHOLD, Phase.CONFESSION, Phase.REUNION]:

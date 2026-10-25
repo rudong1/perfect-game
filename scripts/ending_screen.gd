@@ -15,7 +15,7 @@ func _ready() -> void:
 	if state != null:
 		name_text = str(state.get("player_name"))
 	$Subtitle.text = "这一次，两个人一起离开"
-	story.text = "%s 交出了红、蓝、绿。\n它们汇成完整的光，让镜中的女孩重获生命。\n\n失去的颜色，没有让这段旅程变得空白。\n因为这一次，darksky 真正握住了她的手。" % name_text
+	story.text = "%s 松开了掌心的三色。\n镜中的女孩恢复了容貌，第一次有了温度。\n\n她们拥抱、握紧彼此的手。\n这一次，darksky 不必再留在镜子的另一边。" % name_text
 	restart.pressed.connect(_restart)
 
 

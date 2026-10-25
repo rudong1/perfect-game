@@ -99,5 +99,5 @@ func _physics_process(delta: float) -> void:
 	else:
 		push_velocity = 0.0
 	_notice_time = maxf(0, _notice_time - delta)
-	_hint.text = "镜面另一侧被挡住了" if _notice_time > 0 else "A / D 推镜 · E 穿镜"
+	_hint.text = "镜面另一侧被挡住了" if _notice_time > 0 else ("A / D 推镜 · E 带她穿镜" if get_meta("carries_echo", false) else "A / D 推镜 · E 穿镜")
 	queue_redraw()

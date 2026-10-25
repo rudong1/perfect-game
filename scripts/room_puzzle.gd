@@ -43,7 +43,7 @@ func current_hint() -> String:
 	var step: Dictionary = steps[solved_steps]
 	var hint := str(step.hint)
 	if _is_optical(step):
-		hint += "  已抵达 %d / 3" % step.circuit.channel_count()
+		hint += "  影印 %d/3 · 光路 %d/3" % [step.circuit.unlocked_source_count(), step.circuit.channel_count()]
 	return hint
 
 func _is_optical(step: Dictionary) -> bool:
@@ -71,6 +71,12 @@ func _physics_process(delta: float) -> void:
 			ready = step.circuit.channel_mask == 7
 		"transit_prism":
 			ready = step.slab.used and step.circuit.channel_mask == 7
+		"paired_prism", "transit_paired_prism":
+			ready = step.circuit.channel_mask == 7 and get_node("/root/MirrorState").mirrored == step.mirrored
+			for plate in step.plates:
+				ready = ready and plate.is_activated
+			if step.kind == "transit_paired_prism":
+				ready = ready and step.slab.used
 	_hold = _hold + delta if ready else 0
 	if _hold >= 0.08:
 		step.door.open()

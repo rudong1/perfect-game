@@ -1,0 +1,51 @@
+[gd_resource type="SpriteFrames" format=3]
+
+[ext_resource type="Texture2D" path="res://assets/characters/darksky/darksky_motion.png" id="art"]
+
+[sub_resource type="AtlasTexture" id="pose_0"]
+atlas = ExtResource("art")
+region = Rect2(80, 17, 258, 502)
+margin = Rect2(137, 58, 254, 138)
+
+[sub_resource type="AtlasTexture" id="pose_1"]
+atlas = ExtResource("art")
+region = Rect2(448, 19, 332, 500)
+margin = Rect2(122, 60, 180, 140)
+
+[sub_resource type="AtlasTexture" id="pose_2"]
+atlas = ExtResource("art")
+region = Rect2(841, 18, 326, 501)
+margin = Rect2(116, 59, 186, 139)
+
+[sub_resource type="AtlasTexture" id="pose_3"]
+atlas = ExtResource("art")
+region = Rect2(1227, 17, 271, 502)
+margin = Rect2(115, 58, 241, 138)
+
+[sub_resource type="AtlasTexture" id="pose_4"]
+atlas = ExtResource("art")
+region = Rect2(62, 530, 272, 470)
+margin = Rect2(130, 90, 240, 170)
+
+[sub_resource type="AtlasTexture" id="pose_5"]
+atlas = ExtResource("art")
+region = Rect2(429, 530, 296, 469)
+margin = Rect2(111, 91, 216, 171)
+
+[sub_resource type="AtlasTexture" id="pose_6"]
+atlas = ExtResource("art")
+region = Rect2(814, 530, 292, 470)
+margin = Rect2(111, 90, 220, 170)
+
+[sub_resource type="AtlasTexture" id="pose_7"]
+atlas = ExtResource("art")
+region = Rect2(1206, 530, 279, 471)
+margin = Rect2(109, 89, 233, 169)
+
+[resource]
+animations = [{"name": &"idle", "speed": 3, "loop": true, "frames": [{"duration": 1.0, "texture": SubResource("pose_0")}]},
+{"name": &"reach", "speed": 3, "loop": true, "frames": [{"duration": 1.0, "texture": SubResource("pose_1")}]},
+{"name": &"hug", "speed": 5, "loop": false, "frames": [{"duration": 1.0, "texture": SubResource("pose_2")}, {"duration": 1.0, "texture": SubResource("pose_3")}]},
+{"name": &"run", "speed": 8, "loop": true, "frames": [{"duration": 1.0, "texture": SubResource("pose_4")}, {"duration": 1.0, "texture": SubResource("pose_5")}, {"duration": 1.0, "texture": SubResource("pose_6")}, {"duration": 1.0, "texture": SubResource("pose_7")}]}]
+metadata/foot_origin = Vector2(256, 560)
+metadata/stand_height = 502.0

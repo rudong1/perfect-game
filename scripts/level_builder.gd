@@ -55,14 +55,24 @@ func build(index: int, parent: Node2D) -> Dictionary:
 			steps.append(return_transit)
 		2:
 			var slab := _slab(parent)
-			var light := _light_step(parent, slab, false)
+			var light := _light_step(parent, slab, false, 1510)
 			steps.append(light)
+			var duet := _step(parent, [[1390, false, false], [1530, true, true]], 1660, false)
+			duet.kind = "paired_prism"
+			duet.circuit = light.circuit
+			duet.hint = "三色齐亮后，回到地面，越过出口双板再折返：你踩本体，影子接住另一块。"
+			steps.append(duet)
 		_:
 			var twins := _step(parent, [[380, true, false], [520, false, true]], 700, true)
 			twins.hint = "按 M 后先越过两块踏板，再回头：你踩本体，影子靠延迟补上另一块。"
 			steps.append(twins)
 			var slab := _slab(parent)
-			steps.append(_light_step(parent, slab, true))
+			var final_duet := _light_step(parent, slab, true)
+			final_duet.kind = "transit_paired_prism"
+			final_duet.plates.append(_plate(parent, 1390, false, false, "同行踏板 · 本体"))
+			final_duet.plates.append(_plate(parent, 1530, true, true, "同行踏板 · 影子"))
+			final_duet.hint = "让影子开启三枚封印，带她穿镜，接通三色；最后回地面折返，共同压住出口双板。"
+			steps.append(final_duet)
 	_platform(parent, Vector2(-40, 180), Vector2(40, 720))
 	_platform(parent, Vector2(WORLD_WIDTH, 180), Vector2(40, 720))
 	_decor(parent)
@@ -100,7 +110,7 @@ func _step(parent: Node2D, specifications: Array, door_x: float, mirrored: bool)
 	parent.add_child(door)
 	return {"kind": "plate", "plates": plates, "door": door, "mirrored": mirrored, "hint": "先越过踏板，再回头，给影子留出半拍。"}
 
-func _plate(parent: Node2D, x: float, ceiling: bool, shadow: bool, caption: String = "", width: float = 76.0) -> Area2D:
+func _plate(parent: Node2D, x: float, ceiling: bool, shadow: bool, caption: String = "", width: float = 76.0, compact: bool = false, color: Color = Color.TRANSPARENT) -> Area2D:
 	var area := Area2D.new()
 	area.name = ("ShadowPlate" if shadow else "PlayerPlate") + str(int(x))
 	area.position = Vector2(x, 192 if ceiling else 888)
@@ -112,10 +122,24 @@ func _plate(parent: Node2D, x: float, ceiling: bool, shadow: bool, caption: Stri
 	shape.size = Vector2(width, 24)
 	collision.shape = shape
 	area.add_child(collision)
-	var tint := Color("#bfbfbf") if shadow else Color("#efefef")
-	_plate_visual(area, shape.size, tint)
+	var tint := color if color.a > 0 else (Color("#bfbfbf") if shadow else Color("#efefef"))
+	if compact:
+		var plaque := _paint(area, func() -> void:
+			var canvas: Node2D = get_meta("gothic_draw_target")
+			canvas.draw_rect(Rect2(-shape.size * 0.5, shape.size), Color("#282C32"))
+			canvas.draw_rect(Rect2(-shape.size * 0.5, shape.size), tint, false, 2)
+			var glyph := PackedVector2Array([Vector2(0, -8), Vector2(9, 0), Vector2(0, 8), Vector2(-9, 0)])
+			if area.is_activated:
+				canvas.draw_colored_polygon(glyph, tint)
+			else:
+				glyph.append(glyph[0])
+				canvas.draw_polyline(glyph, tint, 2, true)
+		, Rect2(-shape.size * 0.5, shape.size), 3)
+		area.pressure_changed.connect(func(_pressed: bool) -> void: plaque.queue_redraw())
+	else:
+		_plate_visual(area, shape.size, tint)
 	parent.add_child(area)
-	_hint(area, caption if not caption.is_empty() else ("影子踏板" if shadow else "本体踏板"), Vector2(0, 54 if ceiling else -52), tint)
+	_hint(area, caption if not caption.is_empty() else ("影子踏板" if shadow else "本体踏板"), Vector2(0, (92 if compact else 54) if ceiling else (-92 if compact else -52)), tint)
 	return area
 
 func _fragment(parent: Node2D, is_exit: bool) -> Area2D:
@@ -195,19 +219,34 @@ func _slab(parent: Node2D) -> StaticBody2D:
 	parent.add_child(slab)
 	return slab
 
-func _light_step(parent: Node2D, slab: StaticBody2D, transit: bool) -> Dictionary:
+func _light_step(parent: Node2D, slab: StaticBody2D, transit: bool, door_x: float = 1660.0) -> Dictionary:
 	var circuit := Node2D.new()
 	circuit.name = "PrismCircuit"
 	circuit.set_script(CIRCUIT)
+	var locks: Array[Area2D] = []
+	for i in 3:
+		var seal := _plate(parent, [490.0, 990.0, 1370.0][i], i != 1, true, "影子封印 · " + ["红", "绿", "蓝"][i], 76, true, CIRCUIT.COLORS[i])
+		seal.latching = true
+		locks.append(seal)
+	circuit.shadow_locks = locks
 	parent.add_child(circuit)
-	var step := _step(parent, [], 1660, false)
+	# Late rooms let both actors cross the slab. Their shared horizontal delay,
+	# gravity and collision roles stay unchanged after this deliberate regroup.
+	slab.set_meta("carries_echo", true)
+	slab.transported.connect(_carry_echo)
+	var step := _step(parent, [], door_x, false)
 	step.kind = "transit_prism" if transit else "prism"
 	step.slab = slab
 	step.circuit = circuit
-	step.hint = "靠近反射镜按 M，只转动最近一面；推动立镜避开光束，让三色接收器同时亮起。"
+	step.hint = "让影子依次踩上、下、上三枚封印；推镜避光，按 E 带她穿镜，再调整最近的反射镜。"
 	if transit:
 		step.hint = "双板已解开；推动立镜、按 E 穿镜，再用 M 调整三面反射镜，让三色同时抵达。"
 	return step
+
+func _carry_echo(body: CharacterBody2D) -> void:
+	var echo := get_tree().get_first_node_in_group("mirror_self")
+	if is_instance_valid(echo) and echo.source == body:
+		echo.reset_echo.call_deferred()
 
 func _mirror_target(parent: Node2D, axis: float, entry: float, caption: String) -> Node2D:
 	var marker := Node2D.new()

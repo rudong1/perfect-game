@@ -8,6 +8,7 @@ signal checkpoint_saved(position: Vector2)
 
 const MAX_LEVELS := 4
 const COLOR_COUNT := 3
+const SAVE_VERSION := 7
 const SAVE_PATH := "user://mirror_save.cfg"
 const GAME_TITLE := "镜尽余色"
 
@@ -46,7 +47,7 @@ const LEVELS := [
 	},
 	{
 		"title": "青 · 三色回响",
-		"objective": "按 M 调整最近的反射镜，并移动立镜避开光路，让三色同时抵达。",
+		"objective": "让影子开启三枚封印，带她穿镜接通三色，再以双板接力打开出口。",
 		"story_before": "「听说镜门只记得活人的颜色。」她低下头，又说：「我们先把它们找回来。」",
 		"color_name": "绿色",
 		"collect_color": Color("#73E2A5"),
@@ -62,7 +63,7 @@ const LEVELS := [
 	},
 	{
 		"title": "翠 · 最后的同行",
-		"objective": "完成分身配合、推镜传送与三色光路，走出绿色教堂。",
+		"objective": "从双板同行，到影印光闸与共同穿镜，最后再次和她一起打开出口。",
 		"story_before": "门后的光照亮了你。她也伸出手，掌心却仍旧是空白。",
 		"color_name": "",
 		"collect_color": Color("#73E2A5"),
@@ -200,9 +201,9 @@ func load_from_disk() -> bool:
 	# Old room layouts had different checkpoints. Retain journey progress but
 	# place the player at the new room's entrance when migrating an old save.
 	var version := int(config.get_value("game", "version", 1))
-	# Version 6 replaces the old disappearance ending with the rescue. Completed
-	# older journeys keep their three colours and can enter the new final scene.
-	ending_reached = bool(config.get_value("game", "ending_reached", false)) if version >= 6 else false
+	# The new reunion restores her own face and includes the embrace. Older
+	# completed rescues resume there, retaining the gift instead of spending twice.
+	ending_reached = bool(config.get_value("game", "ending_reached", false)) if version >= SAVE_VERSION else false
 	collected_mask = int(config.get_value("game", "collected_mask", (1 << mini(current_level, COLOR_COUNT)) - 1)) & 7
 	offered_mask = int(config.get_value("game", "offered_mask", 0)) & 7 if version >= 6 else 0
 	darksky_revived = bool(config.get_value("game", "darksky_revived", false)) and has_offered_colors() if version >= 6 else false
@@ -216,6 +217,9 @@ func load_from_disk() -> bool:
 	if version < 6 and current_level < 2:
 		has_checkpoint = false
 		checkpoint_stage = 0
+	if version < SAVE_VERSION and current_level in [2, 3]:
+		has_checkpoint = false
+		checkpoint_stage = 0
 	end_light_puzzle()
 	changed.emit()
 	return true
@@ -224,7 +228,7 @@ func _save_game() -> void:
 	var config := ConfigFile.new()
 	for key in ["player_name", "current_level", "completed_levels", "collected_mask", "checkpoint_stage", "checkpoint_level", "checkpoint_position", "has_checkpoint", "ending_reached", "offered_mask", "darksky_revived"]:
 		config.set_value("game", key, get(key))
-	config.set_value("game", "version", 6)
+	config.set_value("game", "version", SAVE_VERSION)
 	var err := config.save(SAVE_PATH)
 	if err != OK:
 		push_warning("Could not write save file (error %d)" % err)
