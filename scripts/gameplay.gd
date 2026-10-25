@@ -11,6 +11,7 @@ const CHURCH_BACKGROUNDS := [
 @onready var player: CharacterBody2D = $Player
 @onready var builder: Node = $LevelBuilder
 @onready var toast: Label = $HUD/Toast
+@onready var collection_cg: CanvasLayer = $CollectionCG
 var echo: CharacterBody2D
 var _state: Node
 var _mirror: Node
@@ -71,6 +72,10 @@ func load_level() -> void:
 	_goal = result.goal
 	_goal.collected.connect(_on_color_found)
 	_hide_toast()
+	# The colour is saved before its CG. Continue an interrupted pickup here,
+	# then advance once after the player has finished viewing it.
+	if _state.current_level < _state.COLOR_COUNT and _state.has_color(_state.current_level):
+		_on_color_found.call_deferred()
 
 func _on_color_found() -> void:
 	if _busy:
@@ -80,10 +85,12 @@ func _on_color_found() -> void:
 	player.set_physics_process(false)
 	if _goal.is_exit:
 		_show_toast("门开了。她的倒影却还留在门内。", _state.get_level().accent)
+		await get_tree().create_timer(0.5).timeout
 	else:
 		_state.collect_current_color()
-		_show_toast("找到" + _state.get_level().color_name, _state.get_level().collect_color)
-	await get_tree().create_timer(0.5 if _goal.is_exit else 0.75).timeout
+		_hide_toast()
+		collection_cg.show_color(_state.current_level)
+		await collection_cg.finished
 	if not is_inside_tree():
 		return
 	if _goal.is_exit:
@@ -106,8 +113,12 @@ func _input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 func _skip_level() -> void:
-	_state.advance_level(true)
-	load_level()
+	# The hidden shortcut grants the real pickup and uses the same CG/save path.
+	# The last room has an exit instead of a fourth colour.
+	_goal.used = true
+	_goal.hide()
+	_busy = false
+	_on_color_found()
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not _busy and event.is_action_pressed("restart_room") and not event.is_echo():

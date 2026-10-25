@@ -83,6 +83,71 @@ func key_e() -> void:
 	Input.parse_input_event(event)
 	await frames(10)
 
+func press_key(code: Key, repeat: bool = false) -> void:
+	var event := InputEventKey.new()
+	event.keycode = code
+	event.physical_keycode = code
+	event.pressed = true
+	event.echo = repeat
+	Input.parse_input_event(event)
+	await frames(2)
+	event = InputEventKey.new()
+	event.keycode = code
+	event.physical_keycode = code
+	event.pressed = false
+	Input.parse_input_event(event)
+	await frames(2)
+
+func view_pickup(index: int, resume_save: bool = true) -> void:
+	var cg: CanvasLayer = game.collection_cg
+	check(paused and cg.active and cg.art_index == index and state.current_level == index, "a real pickup pauses the room in the matching CG before advancing")
+	var expected_art := ["collect_red.png", "collect_blue.png", "collect_green.png"]
+	check(cg._art.texture.resource_path.ends_with(expected_art[index]) and cg._art.texture.get_width() >= 1600, "each RGB pickup uses its own full-resolution illustration")
+	check(cg.layer > 110 and cg.process_mode == Node.PROCESS_MODE_ALWAYS and cg._heading.text.contains(state.get_level(index).color_name), "CG art and readable colour captions render above the mirrored world and HUD")
+	check(cg._caption.text == cg.CAPTIONS[index] and not cg._caption.text.contains("darksky"), "each pickup has a different understated memory without revealing the companion's true name")
+	var heroine_at: Vector2 = game.player.position
+	var echo_at: Vector2 = game.echo.position
+	var was_mirrored: bool = mirror.mirrored
+	await press_key(KEY_ENTER)
+	check(cg.active and not cg.armed, "input carried over from collection cannot instantly dismiss the CG")
+	for code in [KEY_M, KEY_E, KEY_R, KEY_P]:
+		await press_key(code)
+	Input.action_press("move_right")
+	Input.action_press("jump")
+	await frames(12)
+	release_controls()
+	check(game.player.position == heroine_at and game.echo.position == echo_at and mirror.mirrored == was_mirrored and state.current_level == index, "movement, jump, flip, transport, restart and developer skip cannot alter a paused pickup")
+	await frames(120)
+	check(cg.armed and cg._continue.visible and state.current_level == index, "the CG stays visible after its minimum viewing time until a fresh confirmation")
+	await press_key(KEY_ENTER, true)
+	check(cg.active and not cg._closing, "held Enter does not dismiss the memory")
+	if index == 1 and resume_save:
+		# Simulate closing the game during the CG, then use the actual Continue UI.
+		change_scene_to_file("res://scenes/ui/title_screen.tscn")
+		await frames(6)
+		check(not paused, "removing an open CG releases its owned scene-tree pause")
+		current_scene._continue()
+		await frames(10)
+		game = current_scene
+		cg = game.collection_cg
+		check(paused and cg.active and cg.art_index == index and state.current_level == index and state.collected_count() == 2, "Continue resumes the interrupted blue CG with the saved colour and no repeated puzzle")
+		await frames(120)
+	# Exercise both supported confirmation methods with real input events.
+	if index == 1:
+		var click := InputEventMouseButton.new()
+		click.button_index = MOUSE_BUTTON_LEFT
+		click.pressed = true
+		Input.parse_input_event(click)
+		await frames(2)
+		click = InputEventMouseButton.new()
+		click.button_index = MOUSE_BUTTON_LEFT
+		click.pressed = false
+		Input.parse_input_event(click)
+	else:
+		await press_key(KEY_ENTER)
+	await frames(30)
+	check(not paused and not cg.active and state.current_level == index + 1 and state.collected_count() == index + 1, "confirming the CG resumes the next colour world once without duplicate collection")
+
 func push_to(slab: StaticBody2D, target_x: float) -> void:
 	var direction := 1.0 if target_x > slab.position.x else -1.0
 	await walk_to(slab.position.x - direction * 55)
@@ -283,11 +348,19 @@ func run() -> void:
 	check(not player.is_pushing and absf(slab.push_velocity) < 0.1, "releasing push clears stance and friction stops prop")
 
 	await room(0)
+	check(not game._goal.enabled, "developer colour pickup starts with the ordinary puzzle still locked")
 	await key_p()
-	check(state.current_level == 1, "P advances one room")
-	check(state.collected_count() == 0, "developer skip does not invent a collected color")
+	check(state.current_level == 0 and state.has_color(0) and game.collection_cg.active, "P immediately grants the actual red colour and opens its CG without solving the room")
 	await key_p(true)
-	check(state.current_level == 1, "held P does not repeatedly skip")
+	check(state.current_level == 0 and state.collected_count() == 1, "held P cannot repeat a pickup or advance past its CG")
+	await view_pickup(0, false)
+	await key_p(true)
+	check(state.current_level == 1 and not state.has_color(1), "held P carried into the next room cannot collect its colour")
+	for index in [1, 2]:
+		await key_p()
+		check(state.current_level == index and state.has_color(index) and game.collection_cg.active, "P grants the corresponding colour in each later collectible room")
+		await view_pickup(index, false)
+	check(state.current_level == 3 and state.collected_mask == 7, "three developer pickups retain a real full RGB inventory for the finale")
 	for label in text_nodes(game):
 		check(not label.text.contains("P") and not label.text.contains("落点 x"), "player text keeps the developer shortcut and debug coordinates hidden")
 
@@ -501,8 +574,11 @@ func run() -> void:
 		await walk_to(1740)
 		check(state.collected_count() == mini(index + 1, 3) and (index == 3 or state.has_color(index)), "three colors fill progress; green-world exit adds no extra color")
 		check(not state.collect_current_color(), "duplicate collection cannot inflate prism progress")
-		await frames(80 if index == 3 else 60)
-		check(state.current_level == index + 1, "color pickup advances without prism intermission")
+		if index < 3:
+			await view_pickup(index)
+		else:
+			await frames(80)
+		check(state.current_level == index + 1, "a colour advances after its illustrated memory, while the final exit goes directly to the finale")
 	check(unique_colors.size() == 3 and unique_colors[0].r > unique_colors[0].b and unique_colors[1].b > unique_colors[1].r and unique_colors[2].g > unique_colors[2].r, "collectibles are exactly red, blue, green in order")
 	check(state.is_finale_pending() and not state.is_game_complete() and current_scene.scene_file_path.ends_with("finale.tscn"), "green-world exit leads to the playable betrayal instead of prematurely completing the story")
 	check(state.load_from_disk() and state.is_finale_pending() and state.collected_count() == 3, "an unfinished finale resumes with all colours intact")
@@ -621,6 +697,14 @@ func run() -> void:
 	check(not state.offer_colors() and state.collected_mask == 3 and not state.revive_darksky(), "an incomplete RGB inventory cannot be consumed or revive the girl")
 	state.complete_journey()
 	check(not state.is_game_complete(), "an unrevived journey cannot bypass the rescue by completing early")
+	state.begin_game("新旅程")
+	state.current_level = 3
+	change_scene_to_file("res://scenes/gameplay/gameplay.tscn")
+	await frames(8)
+	game = current_scene
+	await key_p()
+	await frames(80)
+	check(state.current_level == 4 and state.collected_count() == 0 and state.is_finale_pending() and not paused, "P at the final exit enters the finale without inventing a fourth colour or leaving a modal pause")
 	state.begin_game("新旅程")
 	print("MIRROR TESTS: %d checks, %d failures" % [checks, failures])
 	quit(1 if failures else 0)

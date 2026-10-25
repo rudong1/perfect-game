@@ -5,6 +5,7 @@
 [ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="3"]
 [ext_resource type="Script" path="res://scripts/mirror_hud.gd" id="4"]
 [ext_resource type="Script" path="res://scripts/color_progress.gd" id="5"]
+[ext_resource type="Script" path="res://scripts/collection_cg.gd" id="6"]
 
 [node name="Gameplay" type="Node2D"]
 script = ExtResource("1")
@@ -104,3 +105,8 @@ offset_right = 1320.0
 offset_bottom = 296.0
 horizontal_alignment = 1
 theme_override_font_sizes/font_size = 28
+
+[node name="CollectionCG" type="CanvasLayer" parent="."]
+layer = 115
+process_mode = 3
+script = ExtResource("6")

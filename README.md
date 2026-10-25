@@ -51,6 +51,12 @@ Godot 4.7.2 标准版的 2D 镜像解谜游戏。少女与晚半拍的分身走�
 
 世界按灰→红→蓝→绿推进，只收集红、蓝、绿三个颜色，进度最多 3/3。关卡提示、镜面提示、接收器名称和角色名字在画面翻转后仍保持正向可读。
 
+每次真正取得颜色后，先播放对应的独立 CG，再进入下一个世界：红色是祭坛台阶前跪地捧晶，蓝色是雨水回廊中举晶映光，绿色是旋梯上护晶于胸。三张图的构图、动作和场景各不相同；镜中的女孩仍是银发倒影，在后方神情微冷地注视，没有提前变成复活后的容貌。过场暂停关卡，淡入后按 Enter 或点击继续；镜像、移动、穿镜、重置和开发跳关不会打断画面。收集后立即保存，中途退出后「继续旅程」会接着观看该 CG，确认后再进入下一关。
+
+调试构建保留隐藏的 P 键：直接获得本关对应颜色、保存并播放收集 CG，确认后前进；最后一关只有出口，P 直接进入终幕，不增加第四种颜色。按住 P 不会连续获得颜色。此键不显示在游戏内。
+
+[红色收集 CG](assets/backgrounds/collect_red.png) · [蓝色收集 CG](assets/backgrounds/collect_blue.png) · [绿色收集 CG](assets/backgrounds/collect_green.png)
+
 ## 场景
 
 四个区域使用同一教堂构图的独立背景图。无色区悬着残缺的链条；红色区添上旧帷幔；蓝色区有雨痕、积水和流动薄雾；绿色区则让苔蔓爬过石墙，在回廊角落留下墓碑。四张背景已重新去除蜡烛、火焰与暖色光晕，程序烛光层也已移除；金色描边、镜框与存档符号统一为铅灰。彩色部分保留红、蓝、绿三种颜色家族。人物、分身、踏板、门和平台均由真实节点显示。
@@ -84,4 +90,4 @@ XDG_DATA_HOME="$(mktemp -d)" godot --headless --fixed-fps 60 --path . --script r
 
 新美术包括 [复活 CG](assets/backgrounds/ending_revival.png)、[拥抱 CG](assets/backgrounds/ending_embrace.png)、[同行 CG](assets/backgrounds/ending_together.png)、[darksky 动作图](assets/characters/darksky/darksky_motion.png)、[镜前相遇](assets/backgrounds/mirror_hands.png)、[跑步摆臂](assets/characters/hero/hero_run.png)、[单手贴掌](assets/characters/hero/hero_reach.png)、[三色追逐远景](assets/backgrounds/chase_far.png)、[透明拱廊](assets/backgrounds/chase_near.png)、[哥特巨镜](assets/props/gothic_mirror.png) 和 [推镜立柱](assets/props/mirror_slab.png)。透明边距通过 AtlasTexture 裁取，原图保持完整。
 
-测试覆盖序章对话与命名、分身延迟、镜像重力、安全重定位、翻转文字、推行姿态、前两关实际输入通关、后两关影子封印与同渡穿镜、活光出口双板、光束遮挡与重新配合、三色顺序、建筑景深与三色光照、追逐重试、巨镜纹理碎裂、三色真实赠予、独立角色复活与拥抱 CG，以及新旧存档在赠色、复活、结束各阶段的继续流程。背景、角色、字体与界面还通过实际 OpenGL 渲染截图检查。
+测试覆盖序章对话与命名、分身延迟、镜像重力、安全重定位、翻转文字、推行姿态、前两关实际输入通关、后两关影子封印与同渡穿镜、活光出口双板、光束遮挡与重新配合、三色顺序、独立收集 CG 的暂停与确认及中断后续播、建筑景深与三色光照、追逐重试、巨镜纹理碎裂、三色真实赠予、独立角色复活与拥抱 CG，以及新旧存档在赠色、复活、结束各阶段的继续流程。背景、角色、字体与界面还通过实际 OpenGL 渲染截图检查。
